@@ -1,0 +1,7 @@
+data
+
+# NWB files
+*.nwb
+
+# csv files
+*.csv
