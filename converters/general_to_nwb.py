@@ -4,18 +4,18 @@ import numpy as np
 import h5py
 
 
-def add_general_container(nwb_file, data, mat_file, regions):
+def add_general_container(nwb_file, csv_data_row, regions):
     """
     Add general metadata including devices and extracellular electrophysiology to the NWB file.
     
     Parameters
     ----------
     nwb_file : pynwb.NWBFile
-        The existing NWB file object to update.
-    data : dict
-        Dictionary from the .mat file (already loaded, e.g., via h5py).
-    mat_file : str
-        Path to the original .mat file.
+        The NWB file to which the metadata will be added.
+    csv_data_row : pandas.Series
+        A row from the CSV file containing data for the session.
+    regions : list
+        A list indicating the regions of interest (eg mPFC, wS1 ...)
 
     Returns
     -------
@@ -28,26 +28,34 @@ def add_general_container(nwb_file, data, mat_file, regions):
     # 1. Add Device (e.g., Neuropixels probe)
     # ##############################################################
 
-    # ── Probe (NeuroNexus) ──────────────────────────────────────────────
-    probe = nwb_file.create_device(
-        name="NeuroNexus A1x32",
+    # ── Probe (EMG) ──────────────────────────────────────────────
+    EMG_device = nwb_file.create_device(
+        name="",
         description=(
-            "Single-shank silicon probe A1x32-Poly2-10 mm-50 s-177 "
-            "(32 recording sites covering ~775 µm of cortical depth)"
+            ""
         ),
-        manufacturer="NeuroNexus"
+        manufacturer=""
     )
 
-    # ── Headstage (Blackrock) ───────────────────────────────────────────
-    headstage = nwb_file.create_device(
-        name="CerePlex M32",
-        description="Digital headstage used for 0.3 Hz–7.5 kHz amplification and 30 kHz digitization",
-        manufacturer="Blackrock Microsystems"
+    # ── Headstage (LFP) ───────────────────────────────────────────
+    LFP_device = nwb_file.create_device(
+        name="",
+        description="",
+        manufacturer=""
     )
 
     # ##############################################################
     # 2. Create Electrode Group and Add electrodes to the NWB file
     # ##############################################################
+
+
+    electrode_group = nwbfile.create_electrode_group(
+    name='all_regions',
+    description='Combined regions (EMG, PtA, dCA1, etc.)',
+    device=device,
+    location='multiple'
+)
+    
 
     if np.sum(regions) == 2:
         ml_dv_ap  = np.asarray(data.get("ML_DV_AP_32"))   

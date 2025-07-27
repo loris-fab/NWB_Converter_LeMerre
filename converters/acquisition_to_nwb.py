@@ -1,6 +1,7 @@
 from pynwb.ecephys import ElectricalSeries
 import h5py
 import numpy as np
+import warnings
 
 #####################################################
 # Functions that handle LFP acquisition in NWB files
@@ -30,41 +31,31 @@ def add_lfp_acquisition(nwb_file, signal_array, electrode_region):
     nwb_file.add_acquisition(e_series)
 
 
-def extract_lfp_signal(data, mat_file):
+def extract_lfp_signal(csv_data_row):
     """
-    Extract and merge LFP signals from two shanks into one array of shape (T, n_channels).
+    Extract and merge LFP signals from multiple shanks into one array of shape (T, n_channels).
 
     Parameters
     ----------
-    data : dict
-        Dictionary loaded from .mat (with h5py).
-    mat_file : str
-        Path to the original .mat file.
+    csv_data_row : pd.Series
+        Row from the CSV file containing session data eg LFPs
 
     Returns
     -------
     np.ndarray
         Array of shape (n_timepoints, n_channels)
+    list
+        Names of LFP regions (columns)
     """
-    with h5py.File(mat_file, 'r') as f:
-        lfp_refs = data["LFPs"]  # shape (2, 1)
-        blocks = []
-        WS1, mPFC, tjM1 = True, True, True
-        for i in range(3):  # 3 shanks
-            ref = lfp_refs[i][0] if hasattr(lfp_refs[i], '__getitem__') else lfp_refs[i]
-            mat = np.array(f[ref])
-            if mat.ndim != 2:
-                if i == 0:
-                    WS1 = False
-                elif i == 1:
-                    mPFC = False
-                elif i == 2:
-                    tjM1 = False
-            else:
-                mat = mat.T                   
-                blocks.append(mat)
-        if not blocks:
-            raise ValueError("All blocks are empty. Cannot extract LFP signal.")
-        full_array = np.concatenate(blocks, axis=0)
 
-    return full_array.T , [WS1, mPFC, tjM1]  # Transpose to shape (T, 32 or 64 or 96)
+    All_LFP = ["EMG", "PtA", "dCA1", "mPFC", "wM1", "wS1", "wS2", "antM1"]
+    LFPs = csv_data_row[All_LFP].dropna()
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        parsed_LFPs = LFPs.apply(lambda x: list(map(float, x.split(";"))))
+
+    lfp_matrix = np.vstack(parsed_LFPs.values)
+
+    return lfp_matrix.T, list(parsed_LFPs.index)
+

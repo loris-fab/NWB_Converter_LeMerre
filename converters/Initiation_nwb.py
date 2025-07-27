@@ -39,10 +39,12 @@ def create_nwb_file_an(config_file):
         kwargs_subject[key] = subject_data_yaml.get(key)
         if kwargs_subject[key] is not None:
             kwargs_subject[key] = str(kwargs_subject[key])
-    if 'date_of_birth' in kwargs_subject:
+    if 'date_of_birth' in kwargs_subject and kwargs_subject['date_of_birth'] != "Unknown":
         date_of_birth = datetime.strptime(kwargs_subject['date_of_birth'], '%m/%d/%Y')
         date_of_birth = date_of_birth.replace(tzinfo=tzlocal())
         kwargs_subject['date_of_birth'] = date_of_birth
+    else:
+        kwargs_subject.pop('date_of_birth', None)
     subject = Subject(**kwargs_subject)
 
     # Session info
@@ -351,7 +353,11 @@ def files_to_csv(PL, PLALL, csv_file):
             else:
                 wS2 = np.nan
 
-            
+
+            if "antM1" in pli.keys():
+                antM1 = np.asarray(pli["antM1"][0][0][1]).flatten()
+            else:
+                antM1 = np.nan
 
             # Create a new row for the session
             new_row = {
@@ -387,7 +393,7 @@ def files_to_csv(PL, PLALL, csv_file):
                 "wM1": ';'.join(map(str, wM1)) if not (isinstance(wM1, float) and np.isnan(wM1)) else np.nan,
                 "wS1": ';'.join(map(str, wS1)) if not (isinstance(wS1, float) and np.isnan(wS1)) else np.nan,
                 "wS2": ';'.join(map(str, wS2)) if not (isinstance(wS2, float) and np.isnan(wS2)) else np.nan,
-
+                "antM1": ';'.join(map(str, antM1)) if not (isinstance(antM1, float) and np.isnan(antM1)) else np.nan,
             }
 
             # Append the new row to the DataFrame

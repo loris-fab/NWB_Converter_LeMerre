@@ -24,106 +24,101 @@ import converters.intervals_to_nwb
 
 def convert_data_to_nwb_pl(csv_file, 
                            output_folder, 
-                           mouse_name):
+                           mouses_name = None):
 
     csv_data = pd.read_csv(csv_file, sep=";")
     csv_data.columns = csv_data.columns.str.strip() 
 
-    if mouse_name not in ["PL200", "PL201", "PL202", "PL203", "PL204", "PL205", "PL206", "PL207",
-                        "PL208", "PL209", "PL210", "PL211", "PL212", "PL213", "PL214", "PL215",
-                        "PL216", "PL217", "PL218", "PL219", "PL220", "PL221", "PL222", "PL223",
-                        "PL224", "PL225"]:
-        raise ValueError("Mouse name not found in csv file. Please check the mouse_name parameter.")
+    if mouses_name is None:
+        mouses_name = csv_data["Mouse Name"].unique().tolist()
+    else:
+        missing = [name for name in mouses_name if name not in csv_data["Mouse Name"].unique()]
+        if missing:
+            raise ValueError(f"Mouse name(s) not found in csv file: {missing}")
+
     
-    csv_data = csv_data[csv_data["Mouse Name"] == mouse_name]
-    
+    csv_data = csv_data[csv_data["Mouse Name"].isin(mouses_name)]
+    all_sessions = csv_data["Session"]
     
     print("**************************************************************************")
     print("-_-_-_-_-_-_-_-_-_-_-_-_-_-_- NWB conversion _-_-_-_-_-_-_-_-_-_-_-_-_-_-_")
-    print(" ")
+    print("Converting data to NWB format for mouse:", list(all_sessions))
+    i = 0
+
     for index, csv_data_row in csv_data.iterrows():
+        i += 1
+        print("📃 Creating configs for NWB conversion :") if i == 1 else None
         importlib.reload(converters.Initiation_nwb)
         output_path, config_file = converters.Initiation_nwb.files_to_config(csv_data_row=csv_data_row, output_folder=output_folder)
-    print("📃 Creating config for NWB conversion :")
 
-    for index, csv_data_row in csv_data.iterrows():
+        print("📑 Created NWB files :") if i == 1 else None
         importlib.reload(converters.general_to_nwb)
-        print(config_file['session_metadata']["session_description"])
         nwb_file = converters.Initiation_nwb.create_nwb_file_an(config_file=output_path) # same for rewarded and non-rewarded sessions 
-    print("📑 Created NWB file :")
-
-    if False:
-        print("📑 Created NWB file :")
-        importlib.reload(converters.general_to_nwb)
-        print(config_file['session_metadata']["session_description"])
-        nwb_file = converters.Initiation_nwb.create_nwb_file_an(config_file=output_path) # same for rewarded and non-rewarded sessions                                      
-        
-        print("     o 📌 Add general metadata")
+                                  
+        print("     o 📌 Add general metadata") if i == 1 else None
         importlib.reload(converters.acquisition_to_nwb)
-        signal, regions = converters.acquisition_to_nwb.extract_lfp_signal(data, mat_file)
-        electrode_table_region, unique_values = converters.general_to_nwb.add_general_container(nwb_file=nwb_file, data=data, mat_file=mat_file, regions=regions) # same for rewarded and non-rewarded sessions
+        signal, regions = converters.acquisition_to_nwb.extract_lfp_signal(csv_data_row=csv_data_row)
+        #electrode_table_region, unique_values = converters.general_to_nwb.add_general_container(nwb_file=nwb_file, csv_data_row=csv_data_row, regions=regions) 
         print("         - Subject metadata")
         print("         - Session metadata")
         print("         - Device metadata")
         print("         - Extracellular electrophysiology metadata")
-        
-        print("     o 📶 Add acquisition container")
-        converters.acquisition_to_nwb.add_lfp_acquisition(nwb_file=nwb_file, signal_array=signal, electrode_region=electrode_table_region) # same for rewarded and non-rewarded sessions  
 
-        print("     o ⏸️ Add intervall container")
-        importlib.reload(converters.intervals_to_nwb)
-        if Rewarded:
-            converters.intervals_to_nwb.add_intervals_container_Rewarded(nwb_file=nwb_file, data=data, mat_file=mat_file)
-        #else:
-            #converters.intervals_to_nwb.add_intervals_container_NonRewarded(nwb_file=nwb_file, data=data, mat_file=mat_file)
+        if False:         
+            print("     o 📶 Add acquisition container")
+            converters.acquisition_to_nwb.add_lfp_acquisition(nwb_file=nwb_file, signal_array=signal, electrode_region=electrode_table_region) # same for rewarded and non-rewarded sessions  
 
-        print("     o 🧠 Add units container")
-        importlib.reload(converters.units_to_nwb)
-        sampling_rate =  30000
-        converters.units_to_nwb.add_units_container(nwb_file=nwb_file, data=data, unique_values=unique_values, mat_file=mat_file , sampling_rate = sampling_rate , regions=regions) # same for rewarded and non-rewarded sessions
+            print("     o ⏸️ Add intervall container")
+            importlib.reload(converters.intervals_to_nwb)
+            if Rewarded:
+                converters.intervals_to_nwb.add_intervals_container_Rewarded(nwb_file=nwb_file, data=data, mat_file=mat_file)
+            #else:
+                #converters.intervals_to_nwb.add_intervals_container_NonRewarded(nwb_file=nwb_file, data=data, mat_file=mat_file)
 
-        print("     o ⚙️ Add processing container")
-        importlib.reload(converters.behavior_to_nwb)
-        importlib.reload(converters.analysis_to_nwb)
-        if Rewarded:
-            print("         - Behavior data")
-            converters.behavior_to_nwb.add_behavior_container_Rewarded(nwb_file=nwb_file, data=data, config=config_file)
-        else:
-            print("         - Behavior data")
-            converters.behavior_to_nwb.add_behavior_container_NonRewarded(nwb_file=nwb_file, data=data, config_file=config_file)
+            print("     o 🧠 Add units container")
+            importlib.reload(converters.units_to_nwb)
+            sampling_rate =  30000
+            converters.units_to_nwb.add_units_container(nwb_file=nwb_file, data=data, unique_values=unique_values, mat_file=mat_file , sampling_rate = sampling_rate , regions=regions) # same for rewarded and non-rewarded sessions
 
-        print("         - No ephys data for AN sessions")
-        print("         - Analysis complementary information")
-        converters.analysis_to_nwb.add_analysis_container(nwb_file=nwb_file, Rewarded=Rewarded, psth_window=psth_window, psth_bin=psth_bin) # almost same for rewarded and non-rewarded sessions
+            print("     o ⚙️ Add processing container")
+            importlib.reload(converters.behavior_to_nwb)
+            importlib.reload(converters.analysis_to_nwb)
+            if Rewarded:
+                print("         - Behavior data")
+                converters.behavior_to_nwb.add_behavior_container_Rewarded(nwb_file=nwb_file, data=data, config=config_file)
+            else:
+                print("         - Behavior data")
+                converters.behavior_to_nwb.add_behavior_container_NonRewarded(nwb_file=nwb_file, data=data, config_file=config_file)
 
-        importlib.reload(converters.nwb_saving)
-        nwb_path = converters.nwb_saving.save_nwb_file(nwb_file=nwb_file, output_folder=output_folder) # same for rewarded and non-rewarded sessions
+            print("         - No ephys data for AN sessions")
+            print("         - Analysis complementary information")
+            converters.analysis_to_nwb.add_analysis_container(nwb_file=nwb_file, Rewarded=Rewarded, psth_window=psth_window, psth_bin=psth_bin) # almost same for rewarded and non-rewarded sessions
+        else :
+            importlib.reload(converters.nwb_saving)
+            nwb_path = converters.nwb_saving.save_nwb_file(nwb_file=nwb_file, output_folder=output_folder) # same for rewarded and non-rewarded sessions
 
-        print(" ")
-        print("🔎 Validating NWB file before saving...")
-        with NWBHDF5IO(nwb_path, 'r') as io:
-            errors = validate(io=io)
+            print(" ") if i == 1 else None
+            print(f"🔎 Validating NWB file before saving...") if i == 1 else None
+            with NWBHDF5IO(nwb_path, 'r') as io:
+                errors = validate(io=io)
 
-        if not errors:
-            print("     o ✅ File is valid, no errors detected.")
-        else:
-            print("     o ❌ Errors detected:")
-            for err in errors:
-                print("         -", err)
-        print(" ")
-        print("💾 Saving NWB file")
-        if not errors:
-            print("     o 📂 NWB file saved at:")
-            print("         -", nwb_path)
-        else:
-            print("     o ❌ NWB file is invalid, deleting file...")
-            os.remove(nwb_path)
-        print("**************************************************************************")
+            if not errors:
+                print(f"     o ✅ File {nwb_path} is valid, no errors detected and saved successfully.")
+            else:
+                print(f"     o ❌ NWB file {nwb_path} is invalid, deleting file..")
+                os.remove(nwb_path)
+                for err in errors:
+                    print("         -", err)
 
-        # Delete .yaml config file 
-        if os.path.exists(output_path):
-            os.remove(output_path)
-
+            # Delete .yaml config file 
+            if os.path.exists(output_path):
+                os.remove(output_path)
+            
+            # Stop after processing 2 sessions for testing purposes
+            if i == 1: 
+                break
+    print("No forget to delete the testing purpose")
+    print("**************************************************************************")
 
 """
 #_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_
