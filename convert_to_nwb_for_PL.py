@@ -12,7 +12,6 @@ import converters.nwb_saving
 import converters.general_to_nwb
 import converters.Initiation_nwb
 import converters.acquisition_to_nwb
-import converters.units_to_nwb
 import converters.analysis_to_nwb
 import converters.intervals_to_nwb
 
@@ -44,7 +43,6 @@ def convert_data_to_nwb_pl(csv_file,
     print("-_-_-_-_-_-_-_-_-_-_-_-_-_-_- NWB conversion _-_-_-_-_-_-_-_-_-_-_-_-_-_-_")
     print("Converting data to NWB format for mouse:", list(all_sessions))
     i = 0
-
     for index, csv_data_row in csv_data.iterrows():
         i += 1
         print("📃 Creating configs for NWB conversion :") if i == 1 else None
@@ -53,32 +51,29 @@ def convert_data_to_nwb_pl(csv_file,
 
         print("📑 Created NWB files :") if i == 1 else None
         importlib.reload(converters.general_to_nwb)
-        nwb_file = converters.Initiation_nwb.create_nwb_file_an(config_file=output_path) # same for rewarded and non-rewarded sessions 
+        nwb_file = converters.Initiation_nwb.create_nwb_file_an(config_file=output_path) 
                                   
         print("     o 📌 Add general metadata") if i == 1 else None
         importlib.reload(converters.acquisition_to_nwb)
-        signal, regions = converters.acquisition_to_nwb.extract_lfp_signal(csv_data_row=csv_data_row)
-        #electrode_table_region, unique_values = converters.general_to_nwb.add_general_container(nwb_file=nwb_file, csv_data_row=csv_data_row, regions=regions) 
+        signal_LFP, regions, EMG, EEG = converters.acquisition_to_nwb.extract_lfp_signal(csv_data_row=csv_data_row)
+        electrode_table_region, unique_values = converters.general_to_nwb.add_general_container(nwb_file=nwb_file, csv_data_row=csv_data_row, regions=regions)
         print("         - Subject metadata")
         print("         - Session metadata")
         print("         - Device metadata")
         print("         - Extracellular electrophysiology metadata")
 
-        if False:         
-            print("     o 📶 Add acquisition container")
-            converters.acquisition_to_nwb.add_lfp_acquisition(nwb_file=nwb_file, signal_array=signal, electrode_region=electrode_table_region) # same for rewarded and non-rewarded sessions  
+     
+        print("     o 📶 Add acquisition container") if i == 1 else None
+        #converters.acquisition_to_nwb.add_acquisitions_3series(nwb_file, lfp_array=signal_LFP, electrode_region_all=electrode_table_region, channel_labels=unique_values, emg=EMG, eeg=EEG)
 
+
+        if False:  
             print("     o ⏸️ Add intervall container")
             importlib.reload(converters.intervals_to_nwb)
             if Rewarded:
                 converters.intervals_to_nwb.add_intervals_container_Rewarded(nwb_file=nwb_file, data=data, mat_file=mat_file)
             #else:
                 #converters.intervals_to_nwb.add_intervals_container_NonRewarded(nwb_file=nwb_file, data=data, mat_file=mat_file)
-
-            print("     o 🧠 Add units container")
-            importlib.reload(converters.units_to_nwb)
-            sampling_rate =  30000
-            converters.units_to_nwb.add_units_container(nwb_file=nwb_file, data=data, unique_values=unique_values, mat_file=mat_file , sampling_rate = sampling_rate , regions=regions) # same for rewarded and non-rewarded sessions
 
             print("     o ⚙️ Add processing container")
             importlib.reload(converters.behavior_to_nwb)
@@ -115,7 +110,7 @@ def convert_data_to_nwb_pl(csv_file,
                 os.remove(output_path)
             
             # Stop after processing 2 sessions for testing purposes
-            if i == 1: 
+            if i == 1:
                 break
     print("No forget to delete the testing purpose")
     print("**************************************************************************")

@@ -2,179 +2,187 @@
 from uuid import uuid4
 import numpy as np
 import h5py
+from pynwb.device import Device
+import numpy as np
+import pandas as pd
+
+
 
 
 def add_general_container(nwb_file, csv_data_row, regions):
     """
-    Add general metadata including devices and extracellular electrophysiology to the NWB file.
-    
-    Parameters
+    Crée devices, groupes d’électrodes et électrodes (LFP/EMG/EEG),
+    puis renvoie (electrode_table_region, channel_labels) dans l’ordre des colonnes de données.
+
+    Paramètres
     ----------
     nwb_file : pynwb.NWBFile
-        The NWB file to which the metadata will be added.
-    csv_data_row : pandas.Series
-        A row from the CSV file containing data for the session.
-    regions : list
-        A list indicating the regions of interest (eg mPFC, wS1 ...)
+    csv_data_row : pd.Series
+    regions : list[str]
+        LFP regions présentes (p.ex. issues de extract_lfp_signal)
 
-    Returns
-    -------
+    Retour
+    ------
     electrode_table_region : pynwb.core.DynamicTableRegion
-        A region referencing all electrodes. Useful when creating ElectricalSeries.
+    channel_labels : list[str]
+        Étiquettes de canaux dans l’ordre (ex : ["PtA","dCA1","...","EMG1","EMG2","EEG1","EEG2"])
     """
 
-
     # ##############################################################
-    # 1. Add Device (e.g., Neuropixels probe)
+    # 1. Add Device 
     # ##############################################################
 
-    # ── Probe (EMG) ──────────────────────────────────────────────
-    EMG_device = nwb_file.create_device(
-        name="",
-        description=(
-            ""
-        ),
-        manufacturer=""
-    )
+    def get_or_create_device(name, manufacturer, description):
+        if name in nwb_file.devices:
+            return nwb_file.devices[name]
+        dev = Device(name=name, description=description, manufacturer=manufacturer)
+        nwb_file.add_device(dev)
+        return dev
 
-    # ── Headstage (LFP) ───────────────────────────────────────────
-    LFP_device = nwb_file.create_device(
-        name="",
-        description="",
-        manufacturer=""
+    ampli_lfp = get_or_create_device(
+        "Amplifier LFP",
+        "A-M Systems",
+        "Extracellular amplifier for LFP recording - Model 3000 AC/DC Differential Amplifier (custom modified).",
     )
+    electrode_device = get_or_create_device(
+        "Tungsten Microelectrodes",
+        "FHC",
+        "High-impedance sharp tungsten microelectrodes (10–12 MΩ), 75 μm shaft diameter; stereotaxically implanted individually. Model UEWSCGSELNND.",
+    )
+    eeg_device = get_or_create_device(
+        "EEG Device",
+        "N/A",
+        "Surface electrodes for EEG recording (contralateral hemisphere).",
+    )
+    digitizer = get_or_create_device(
+        "Digitizer",
+        "LDS Nicolet",
+        "Signals digitized and recorded at 2 kHz on Vision XP.",
+    )
+    _ = (ampli_lfp, digitizer)  # référencés pour traçabilité
+
 
     # ##############################################################
     # 2. Create Electrode Group and Add electrodes to the NWB file
     # ##############################################################
 
-
-    electrode_group = nwbfile.create_electrode_group(
-    name='all_regions',
-    description='Combined regions (EMG, PtA, dCA1, etc.)',
-    device=device,
-    location='multiple'
-)
-    
-
-    if np.sum(regions) == 2:
-        ml_dv_ap  = np.asarray(data.get("ML_DV_AP_32"))   
-        with h5py.File(mat_file, 'r') as f:
-            area_array = np.array([
-            f[ref[0]][()].tobytes().decode('utf-16le').strip()
-            for ref in data['Area']])
-
-            unique_values, first_indices = np.unique(area_array, return_index=True)
-
-            ref = ml_dv_ap[first_indices[0]][0] if hasattr(ml_dv_ap[1], '__getitem__') else ml_dv_ap[first_indices[0]]
-            obj = f[ref]
-            shank1 = np.array(obj)
-            ref = ml_dv_ap[first_indices[1]][0] if hasattr(ml_dv_ap[-1], '__getitem__') else ml_dv_ap[first_indices[1]]
-            obj = f[ref]
-            shank2 = np.array(obj)
-            shank_total = np.concatenate((shank1, shank2), axis=1)
-            assert shank_total.shape == (3, 64), "Expected shape of shank_total is (3, 64), got {}".format(shank_total.shape)
-
-        # Create group for each shank
-        shank_1 = nwb_file.create_electrode_group(
-            name="Shank one",
-            description="NeuroNexus A1x32 probe, Shank 1",
-            location="In the {} according to the Allen Brain Atlas".format(unique_values[0]),
-            device=probe
-        )
-        shank_2 = nwb_file.create_electrode_group(
-            name="Shank two",
-            description="NeuroNexus A1x32 probe, Shank 2",
-            location="In the {} according to the Allen Brain Atlas".format(unique_values[1]),
-            device=probe
+    def get_or_create_group(name, description, location, device):
+        if name in nwb_file.electrode_groups:
+            return nwb_file.electrode_groups[name]
+        return nwb_file.create_electrode_group(
+            name=name, description=description, location=location, device=device
         )
 
-        with h5py.File(mat_file, 'r') as f:
-            nwb_file.add_electrode_column(name="ccf_ml", description="ccf coordinate in ml axis")
-            nwb_file.add_electrode_column(name="ccf_ap", description="ccf coordinate in ap axis")
-            nwb_file.add_electrode_column(name="ccf_dv", description="ccf coordinate in dv axis")
+    lfp_group = get_or_create_group(
+        "LFP",
+        "LFP via sharp tungsten microelectrodes (~10 MΩ). Ref: cerebellar silver wire; band-pass 0.1–1000 Hz.",
+        "Multiple (PtA, dCA1, mPFC, wM1, wS1, wS2, antM1) using interaural coordinates (Paxinos and Franklin 2008)",
+        electrode_device,
+    )
+    emg_group = get_or_create_group(
+        "EMG",
+        "Differential EMG from neck muscles; band-pass 10–20000 Hz.",
+        "Neck muscles",
+        electrode_device,
+    )
+    eeg_group = get_or_create_group(
+        "EEG",
+        "Differential EEG from parietal and frontal; band-pass 0.1–1000 Hz.",
+        "Cortex dura (parietal & frontal) using interaural coordinates (Paxinos and Franklin 2008)",
+        eeg_device,
+    )
 
-            # Add electrodes from Shank1
-            for i in range(64):
-                ml, dv, ap = shank_total[:, i]
-                if i < 32:
-                    shank = shank_1
-                    loca = unique_values[0]
-                else:
-                    shank = shank_2
-                    loca = unique_values[1]
-                nwb_file.add_electrode(
-                    id=i,
-                    location=loca,
-                    # Group, group_name,index_on_probe,
-                    ccf_ml=ml,
-                    ccf_dv=dv,
-                    ccf_ap=ap,
-                    # shank_col,shank_row,ccf_id,ccf_acronym,cff_name,cff_parent_id,cff_parent_acronym,cff_parent_name,
-                    #rel_x = np.nan,  # x coordinate in the probe space
-                    #rel_y = np.nan,  # y coordinate in the probe space
-                    #rel_z = np.nan,  # z coordinate in the probe space
-                    #imp=np.nan,
-                    #filtering="none",
-                    group = shank,
-                )
 
-    if np.sum(regions) == 3:
-        raise ValueError("This function currently supports only 2 regions (e.g., Shank1 and Shank2). Please check the regions provided in the data.")
+    MM = 1 #because the coordinates are in mm
 
-    if np.sum(regions) == 1:
-        ml_dv_ap  = np.asarray(data.get("ML_DV_AP_32"))   
-        with h5py.File(mat_file, 'r') as f:
-            ref = ml_dv_ap[1][0] if hasattr(ml_dv_ap[1], '__getitem__') else ml_dv_ap[1]
-            obj = f[ref]
-            shank_total = np.array(obj)
-            assert shank_total.shape == (3, 32), "Expected shape of shank1 is (3, 32), got {}".format(shank_total.shape)
+    AREA_COORDS_MM = {
+        "wS1": (1.95, 3.5, 0.5),
+        "wS2": (2.1, 4.2, 0.5),
+        "wM1": (4.8, 1.0, 0.4),
+        "PtA": (1.85, 1.6, 0.5),
+        "mPFC": (5.8, 0.3, 1.85),
+        "dCA1": (1.3, 2.0, 1.3),
+        "antM1": (np.nan, np.nan, np.nan),
+    }
+    EEG_POS_MM = {
+        "parietal": (2.0, 1.5, 0.0),
+        "frontal":  (5.3, 1.5, 0.0),
+    }
 
-        if regions[0] == 1:
-            unique_values = "Ws1"
-        elif regions[1] == 1:
-            unique_values = "mPFC"
-        elif regions[2] == 1:
-            unique_values = "tjM1"
+    def _last_row_index():
+        """Index de la dernière ligne de la table electrodes (0 based)."""
+        try:
+            return len(nwb_file.electrodes.id.data) - 1
+        except Exception:
+            # fallback selon versions de pynwb
+            return nwb_file.electrodes.table.length - 1
 
-        # Create group for each shank
-        shank_1 = nwb_file.create_electrode_group(
-            name="Shank one",
-            description="NeuroNexus A1x32 probe, Shank 1",
-            location="In the {} according to the Allen Brain Atlas".format(unique_values),
-            device=probe
+    electrode_indices = []
+    channel_labels = []
+
+    # ---------- LFP ----------
+    ALL_LFP = ["PtA", "dCA1", "mPFC", "wM1", "wS1", "wS2", "antM1"]
+    lfp_regions_present = [r for r in regions if r in ALL_LFP]
+    if len(lfp_regions_present) > 7:
+        lfp_regions_present = lfp_regions_present[:7]  # LFP:7 max
+
+    for r in lfp_regions_present:
+        ap, lat, depth = AREA_COORDS_MM.get(r, (np.nan, np.nan, np.nan))
+        nwb_file.add_electrode(
+            x=np.nan if np.isnan(ap) else ap * MM,
+            y=np.nan if np.isnan(lat) else lat * MM,
+            z=np.nan if np.isnan(depth) else depth * MM,
+
+            imp=10e6,  # Ohms (~10 MΩ)
+            location=r,
+            filtering="0.1–1000 Hz band-pass",
+            group=lfp_group,
+            reference="Cerebellar silver wire",
+            group_name="LFP",
         )
+        electrode_indices.append(_last_row_index())
+        channel_labels.append(r)
 
-        with h5py.File(mat_file, 'r') as f:
-            nwb_file.add_electrode_column(name="ccf_ml", description="ccf coordinate in ml axis")
-            nwb_file.add_electrode_column(name="ccf_ap", description="ccf coordinate in ap axis")
-            nwb_file.add_electrode_column(name="ccf_dv", description="ccf coordinate in dv axis")
+    # ---------- EMG (2 si présent) ----------
+    has_emg = pd.notna(csv_data_row.get("EMG", None))
+    if has_emg:
+        for i in range(2):
+            nwb_file.add_electrode(
+                x=np.nan, y=np.nan, z=np.nan,
+                imp=np.nan,
+                location="Neck muscles",
+                filtering="10–20000 Hz band-pass",
+                group=emg_group,
+                reference="Differential (neck 1 ↔ neck 2)",
+                group_name="EMG",
+            )
+            electrode_indices.append(_last_row_index())
+            channel_labels.append(f"EMG{i+1}")
 
-            # Add electrodes from Shank1
-            for i in range(32):
-                ml, dv, ap = shank_total[:, i]
-                nwb_file.add_electrode(
-                    id=i,
-                    location=unique_values,
-                    # Group, group_name,index_on_probe,
-                    ccf_ml=ml,
-                    ccf_dv=dv,
-                    ccf_ap=ap,
-                    # shank_col,shank_row,ccf_id,ccf_acronym,cff_name,cff_parent_id,cff_parent_acronym,cff_parent_name,
-                    #rel_x = np.nan,  # x coordinate in the probe space
-                    #rel_y = np.nan,  # y coordinate in the probe space
-                    #rel_z = np.nan,  # z coordinate in the probe space
-                    #imp=np.nan,
-                    #filtering="none",
-                    group = shank_1,
-                )
+    # ---------- EEG (2 si présent) ----------
+    has_eeg = pd.notna(csv_data_row.get("EEG", None))
+    if has_eeg:
+        for name in ("parietal", "frontal"):
+            ap, lat, depth = EEG_POS_MM[name]
+            nwb_file.add_electrode(
+                x=ap * MM, y=lat * MM, z=depth * MM,
+                imp=np.nan,
+                location=f"EEG {name} (contralateral; dura)",
+                filtering="0.1–1000 Hz band-pass",
+                group=eeg_group,
+                reference="Differential (parietal ↔ frontal)",
+                group_name="EEG",
+            )
+            electrode_indices.append(_last_row_index())
+            channel_labels.append("EEG1" if name == "parietal" else "EEG2")
 
     # ##############################################################
-    # 3. Return region (useful for linking to ElectricalSeries)
+    # 3. Return region 
     # ##############################################################
 
     electrode_table_region = nwb_file.create_electrode_table_region(
-        region=list(range(shank_total.shape[1])), 
-        description="All electrodes from Shank1 and Shank2"
+        region=electrode_indices,
+        description="Electrodes used for LFP/EMG/EEG in this session (order matches data columns).",
     )
-    return electrode_table_region, unique_values 
+
+    return electrode_table_region, channel_labels

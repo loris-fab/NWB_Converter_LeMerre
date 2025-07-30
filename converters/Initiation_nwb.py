@@ -7,6 +7,7 @@ from dateutil.tz import tzlocal
 from pynwb import NWBFile
 from pynwb.file import Subject
 from scipy.io import loadmat
+import re
 
 #############################################################################
 # Function that creates the nwb file object using all metadata
@@ -39,7 +40,7 @@ def create_nwb_file_an(config_file):
         kwargs_subject[key] = subject_data_yaml.get(key)
         if kwargs_subject[key] is not None:
             kwargs_subject[key] = str(kwargs_subject[key])
-    if 'date_of_birth' in kwargs_subject and kwargs_subject['date_of_birth'] != "Unknown":
+    if 'date_of_birth' in kwargs_subject and kwargs_subject['date_of_birth'] != "na":
         date_of_birth = datetime.strptime(kwargs_subject['date_of_birth'], '%m/%d/%Y')
         date_of_birth = date_of_birth.replace(tzinfo=tzlocal())
         kwargs_subject['date_of_birth'] = date_of_birth
@@ -109,16 +110,16 @@ def files_to_config(csv_data_row,output_folder="data"):
     ###  Session metadata extraction  ###
 
     ### Experiment_description
-    date_experience = pd.to_datetime(date, format='%Y%m%d')
+    #date_experience = pd.to_datetime(date, format='%Y%m%d')
 
     ref_weight = subject_info.get("Weight of Reference", "")
     if pd.isna(ref_weight) or str(ref_weight).strip().lower() in ["", "nan"]:
-        ref_weight = "Unknown"
+        ref_weight = 'na'
     else:
         try:
             ref_weight = float(ref_weight)
         except Exception:
-            ref_weight = "Unknown"  
+            ref_weight = 'na'
 
     experiment_description = {
     #'reference_weight': ref_weight,
@@ -135,8 +136,9 @@ def files_to_config(csv_data_row,output_folder="data"):
     #'each_video_duration': ?,
     #'camera_start_delay': ?,
     #'artifact_window': ?,
-    #'licence': str(subject_info.get("licence", "")).strip(),
+    'licence': str(subject_info.get("licence", "")).strip() + " (All procedures were approved by the Swiss Federal Veterinary Office)",
     #'ear tag': str(subject_info.get("Ear tag", "")).strip(),
+    "Software and Algorithms": "Labview, Klusta, MATLAB R2015b",
     }
     ### Experimenter
     experimenter = "Pierre Le Merre"
@@ -155,8 +157,10 @@ def files_to_config(csv_data_row,output_folder="data"):
     if subject_info["Birth date"] != "Unknown":
         birth_date = pd.to_datetime(subject_info["Birth date"], dayfirst=True).strftime('%m/%d/%Y')
     else:
-        birth_date = "Unknown"
-    age = subject_info["Mouse Age (d)"]
+        birth_date = 'na'
+    age = subject_info["Mouse Age (d)"] 
+    if age == "Unknown":
+        age = 'na'
     #age = f"P{age}D"
 
 
@@ -170,16 +174,29 @@ def files_to_config(csv_data_row,output_folder="data"):
     ### weight
     weight = subject_info.get("Weight Session", "")
     if pd.isna(weight) or str(weight).strip().lower() in ["", "nan"]:
-        weight = "Unknown"
+        weight = 'na'
     else:
         try:
             weight = float(weight)
         except Exception:
-            weight = "Unknown" 
+            weight = 'na'
 
     ### Behavioral metadata extraction 
     camera_flag = 1
 
+    ### behavioral type
+    behavior_type = str(subject_info.get("Behavior Type", "Unknown").strip())
+    if behavior_type == "Detection Task":
+        session_description = "ephys " + behavior_type + ": For the detection task, trials with whisker stimulation (Stimulus trials) or those without whisker stimulation (Catch trials) were started without any preceding cues, at random inter-trial intervals ranging from 6 to 12 s. Catch trials were randomly interleaved with Stimulus trials, with 50% probability of all trials. If the mouse licked in the 3-4 s no-lick window preceding the time when the trial was supposed to occur, then the trial was aborted. Catch trials were present from the first day of training. Mice were rewarded only if they licked the water spout within a 1 s response window following the whisker stimulation (Hit)."
+        stimulus_notes = "Whisker stimulation was applied to the C2 region to evoke sensory responses."
+
+    elif behavior_type == "Neutral Exposition":
+        session_description = "ephys " + behavior_type + ": For the neutral exposure task, mice were trained to collect the reward by licking the water spout with an intertrial interval ranging from 6 to 12 s and after a no-lick period of 3-4 s, similar to the detection task. At random times the same 1 ms whisker stimulus was delivered to the C2 whisker with an inter stimulus interval ranging from 6 to 12 s and a probability of 50%. The whisker stimulus was not correlated to the delivery of the reward, therefore, no association between the stimulus and the delivery of the reward could be made. In this behavioral paradigm, mice were exposed to the whisker stimulus during 7-10 days."
+        stimulus_notes = "Whisker stimulation was applied to the C2 region to evoke sensory responses."
+
+    else:
+        raise ValueError(f"Unknown behavior type: {behavior_type}")
+    
     # Construct the output YAML path
     config = {
         'session_metadata': {
@@ -193,13 +210,13 @@ def files_to_config(csv_data_row,output_folder="data"):
             'pharmacology': 'na',
             'protocol': 'na',
             'related_publications': related_publications,
-            'session_description': "ephys" +" " + str(subject_info.get("Session Type", "Unknown").strip()),
+            'session_description': session_description,
             'session_id': session_id,
             'session_start_time': session_start_time,
             'slices': "na", 
             'source_script': 'na',
             'source_script_file_name': 'na',
-            'stimulus_notes': 'Whisker stimulation was applied unilaterally to the C2 region to evoke sensory responses.',
+            'stimulus_notes': stimulus_notes,
             'surgery': 'na',
             'virus': 'na',
 
@@ -233,9 +250,15 @@ def files_to_config(csv_data_row,output_folder="data"):
 def files_to_csv(PL, PLALL, csv_file):
 
     csv_data = pd.read_csv(csv_file, sep=";")
-    csv_data.columns = csv_data.columns.str.strip() 
+    csv_data.columns = csv_data.columns.str.strip()
 
-    General_data = loadmat([os.path.join(PL, f) for f in os.listdir(PL)][0])
+    General_data = next((os.path.join(PL, f) for f in os.listdir(PL) if f.endswith('.mat')), None)
+
+    if General_data:
+        General_data = loadmat(General_data)
+    else:
+        raise FileNotFoundError("No .mat file found in the specified directory.")
+
     mouse_name = General_data["LFP_Data"][0][0][0][0][0][0]
     # Check if any row in the "Mouse Name" column contains mouse_name
     if any(csv_data["Mouse Name"].astype(str).str.contains(str(mouse_name))):
@@ -253,8 +276,18 @@ def files_to_csv(PL, PLALL, csv_file):
 
     # informations sessions
     # Iterate over each file in PLALL 
+
+    def extract_number(file_name):
+        if file_name.endswith('.mat'):
+            match = re.search(r'D(\d+)', file_name)
+            if match:
+                return int(match.group(1))
+            raise ValueError(f"No number found in a .mat file: {file_name}")
+        return -1
+
     i = -1
-    for file_name in sorted(os.listdir(PLALL)):
+
+    for file_name in sorted(os.listdir(PLALL), key=extract_number):
         file_path = os.path.join(PLALL, file_name)
         if os.path.isfile(file_path) and file_name.endswith('.mat'):
             i += 1
@@ -301,6 +334,8 @@ def files_to_csv(PL, PLALL, csv_file):
                 behaviortype = "Detection Task"
             elif behaviortype == "X":
                 behaviortype = "Neutral Exposition"
+            else:
+                raise ValueError(f"Unknown behavior type: {behaviortype}")
 
             # Stim_times
             stim_onset= np.asarray(pli["Stim_times"][0][0][1][0])/1000
@@ -359,6 +394,11 @@ def files_to_csv(PL, PLALL, csv_file):
             else:
                 antM1 = np.nan
 
+            if "EEG" in pli.keys():
+                EEG = np.asarray(pli["EEG"][0][0][1]).flatten()
+            else:
+                EEG = np.nan
+
             # Create a new row for the session
             new_row = {
                 "Mouse Name": mouse_name,
@@ -370,7 +410,7 @@ def files_to_csv(PL, PLALL, csv_file):
                 "strain": strain,
                 "mutations": "",
                 "Birth date": birth_date,
-                "licence": "Unknown",
+                "licence": "1628",
                 "DG": "",
                 "ExpEnd": "",
                 "Created on": "Unknown",
@@ -394,6 +434,7 @@ def files_to_csv(PL, PLALL, csv_file):
                 "wS1": ';'.join(map(str, wS1)) if not (isinstance(wS1, float) and np.isnan(wS1)) else np.nan,
                 "wS2": ';'.join(map(str, wS2)) if not (isinstance(wS2, float) and np.isnan(wS2)) else np.nan,
                 "antM1": ';'.join(map(str, antM1)) if not (isinstance(antM1, float) and np.isnan(antM1)) else np.nan,
+                "EEG": ';'.join(map(str, EEG)) if not (isinstance(EEG, float) and np.isnan(EEG)) else np.nan
             }
 
             # Append the new row to the DataFrame
@@ -401,4 +442,17 @@ def files_to_csv(PL, PLALL, csv_file):
             print(f"Processing session file: {file_name}")
     # Save the updated DataFrame to the CSV file
     csv_data.to_csv(csv_file, sep=';', index=False)
-    return None
+    return csv_data
+
+
+def remove_rows_by_mouse_name(df, mouse_name):
+    return df[df["Mouse Name"] != mouse_name]
+
+def remove_nwb_files(folder_path):
+    for filename in os.listdir(folder_path):
+        if filename.endswith('.nwb'):
+            file_path = os.path.join(folder_path, filename)
+            try:
+                os.remove(file_path)
+            except Exception as e:
+                print(f"Erreur lors de la suppression de {file_path}: {e}")
