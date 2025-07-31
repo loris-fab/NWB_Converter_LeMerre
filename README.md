@@ -69,7 +69,7 @@ python convert_to_nwb_for_PL.py csv_path output_folder
 *Options:*
 * `--mouses_name` : Name of the mouse/session to convert (default: all sessions)
 * `--psth_window`: time window for PSTH (default: -0.2 0.5 seconds)
-* `--psth_bin`: bin width for PSTH (default: 0.010 seconds)
+
 
 
 If everything runs correctly, you should see an output similar to this:
@@ -86,13 +86,13 @@ Converting data to NWB format for mouse: ['PL200_20140619', 'PL200_20140620', 'P
          - Device metadata
          - Extracellular electrophysiology metadata
      o 📶 Add acquisition container
-     o ⏸️ Add intervall container
      o ⚙️ Add processing container
          - Behavior data
          - No ephys data for AN sessions
          - Analysis complementary information
              > Added LFP_mean_across_all_units to analysis module
              > Added global_LFP to analysis module
+     o ⏸️ Add intervall container
 
 🔎 Validating NWB file before saving...
      o ✅ File data/PL200_20140619_142055.nwb is valid, no errors detected and saved successfully.
