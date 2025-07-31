@@ -12,18 +12,24 @@ import pandas as pd
 
 def add_acquisitions_3series(nwb_file, lfp_array, electrode_region_all, channel_labels, emg=None, eeg=None):
     """
-    Crée 3 ElectricalSeries séparées (LFP, EMG, EEG) si les données/électrodes existent.
+    Creates 3 separate ElectricalSeries (LFP, EMG, EEG) if the data/electrodes exist.
     - rate = 2000.0
     - unit = "V"
 
-    Paramètres
+    Parameters
     ----------
     nwb_file : pynwb.NWBFile
-    lfp_array : (T, n_lfp)
-    electrode_region_all : DynamicTableRegion (tous les canaux créés)
-    channel_labels : list[str]  (renvoyé par add_general_container)
-    emg : (T,) ou (T,2) ou None
-    eeg : (T,) ou (T,2) ou None
+        The NWB file object to which the acquisitions will be added.
+    lfp_array : np.ndarray
+        Array of shape (T, n_lfp) containing LFP data.
+    electrode_region_all : DynamicTableRegion
+        DynamicTableRegion containing all created channels.
+    channel_labels : list[str]
+        List of channel labels (returned by add_general_container).
+    emg : np.ndarray or None, optional
+        Array of shape (T,) or (T,2) containing EMG data, or None.
+    eeg : np.ndarray or None, optional
+        Array of shape (T,) or (T,2) containing EEG data, or None.
     """
 
 
@@ -31,10 +37,6 @@ def add_acquisitions_3series(nwb_file, lfp_array, electrode_region_all, channel_
     UNIT = "V"
     LFP_LABELS = ["PtA", "dCA1", "mPFC", "wM1", "wS1", "wS2", "antM1"]
 
-    # --- util ---
-    def _to_2d(a):
-        a = np.asarray(a, dtype=float)
-        return a[:, None] if a.ndim == 1 else a
 
     def _region_indices(dtr):
         # indices globaux des électrodes
@@ -42,8 +44,10 @@ def add_acquisitions_3series(nwb_file, lfp_array, electrode_region_all, channel_
             return list(dtr.data[:])
         except Exception:
             try:
+                print("second")
                 return list(dtr.region.data[:])
             except Exception:
+                print("third")
                 return list(dtr.region)
 
     # mapping label -> index global d'électrode
@@ -51,12 +55,10 @@ def add_acquisitions_3series(nwb_file, lfp_array, electrode_region_all, channel_
     label_to_idx = dict(zip(channel_labels, idx_all))
 
     # ---------- LFP ----------
-    lfp_array = _to_2d(lfp_array)
     lfp_labels = [lab for lab in channel_labels if lab in LFP_LABELS][:lfp_array.shape[1]]
     if lfp_array.shape[1] != len(lfp_labels):
-        raise ValueError(
-            f"Incohérence LFP: data a {lfp_array.shape[1]} colonnes, labels LFP trouvés {len(lfp_labels)}."
-        )
+        raise ValueError(f"Inconsistency in LFP: data has {lfp_array.shape[1]} columns, found {len(lfp_labels)} LFP labels.")
+    
     lfp_idx = [label_to_idx[lab] for lab in lfp_labels]
     lfp_region = nwb_file.create_electrode_table_region(lfp_idx, "LFP electrodes")
     es_lfp = ElectricalSeries(
@@ -65,20 +67,15 @@ def add_acquisitions_3series(nwb_file, lfp_array, electrode_region_all, channel_
         electrodes=lfp_region,
         starting_time=0.0,
         rate=RATE,
-        unit=UNIT,
-        description="Traces LFP (brut), 2000 Hz, en V."
+        description="LFPs recorded from multiple electrodes",
+        comments = "2000 Hz, in V."
     )
     nwb_file.add_acquisition(es_lfp)
 
-    # ---------- EMG (optionnel) ----------
+    # ---------- EMG ----------
     es_emg = None
     emg_labels = [lab for lab in channel_labels if lab.startswith("EMG")]
     if emg is not None and len(emg_labels) > 0:
-        emg = _to_2d(emg)
-        # Ajuste au nombre d'électrodes disponibles (1 ou 2 typiquement)
-        if emg.shape[1] > len(emg_labels):
-            raise ValueError(f"EMG a {emg.shape[1]} colonnes mais {len(emg_labels)} électrodes EMG définies.")
-        emg_labels = emg_labels[:emg.shape[1]]
         emg_idx = [label_to_idx[lab] for lab in emg_labels]
         emg_region = nwb_file.create_electrode_table_region(emg_idx, "EMG electrodes")
         es_emg = ElectricalSeries(
@@ -87,19 +84,15 @@ def add_acquisitions_3series(nwb_file, lfp_array, electrode_region_all, channel_
             electrodes=emg_region,
             starting_time=0.0,
             rate=RATE,
-            unit=UNIT,
-            description="Traces EMG (brut), 2000 Hz, en V."
+            description="EMG recorded differentially from 2 electrodes, resulting in a single EMG signal",
+            comments = "2000 Hz, in V."
         )
         nwb_file.add_acquisition(es_emg)
 
-    # ---------- EEG (optionnel) ----------
+    # ---------- EEG  ----------
     es_eeg = None
     eeg_labels = [lab for lab in channel_labels if lab.startswith("EEG")]
     if eeg is not None and len(eeg_labels) > 0:
-        eeg = _to_2d(eeg)
-        if eeg.shape[1] > len(eeg_labels):
-            raise ValueError(f"EEG a {eeg.shape[1]} colonnes mais {len(eeg_labels)} électrodes EEG définies.")
-        eeg_labels = eeg_labels[:eeg.shape[1]]
         eeg_idx = [label_to_idx[lab] for lab in eeg_labels]
         eeg_region = nwb_file.create_electrode_table_region(eeg_idx, "EEG electrodes")
         es_eeg = ElectricalSeries(
@@ -108,8 +101,8 @@ def add_acquisitions_3series(nwb_file, lfp_array, electrode_region_all, channel_
             electrodes=eeg_region,
             starting_time=0.0,
             rate=RATE,
-            unit=UNIT,
-            description="Traces EEG (brut), 2000 Hz, en V."
+            description="EEG recorded differentially from 2 electrodes, resulting in a single EMG signal",
+            comments = "2000 Hz, in V."
         )
         nwb_file.add_acquisition(es_eeg)
 

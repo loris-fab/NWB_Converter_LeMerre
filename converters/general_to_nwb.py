@@ -153,7 +153,7 @@ def add_general_container(nwb_file, csv_data_row, regions):
                 location="Neck muscles",
                 filtering="10–20000 Hz band-pass",
                 group=emg_group,
-                reference="Differential (neck 1 ↔ neck 2)",
+                reference="Differential",
                 group_name="EMG",
             )
             electrode_indices.append(_last_row_index())
@@ -170,7 +170,7 @@ def add_general_container(nwb_file, csv_data_row, regions):
                 location=f"EEG {name} (contralateral; dura)",
                 filtering="0.1–1000 Hz band-pass",
                 group=eeg_group,
-                reference="Differential (parietal ↔ frontal)",
+                reference="Cerebellar silver wire",
                 group_name="EEG",
             )
             electrode_indices.append(_last_row_index())
