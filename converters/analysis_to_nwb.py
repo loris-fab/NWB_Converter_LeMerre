@@ -13,7 +13,6 @@ def add_analysis_container(
     *,
     nwb_file, 
     psth_window,         # seconds around stimulus
-    psth_bin,       # 10-ms bins
     rewarded
 ):
     """

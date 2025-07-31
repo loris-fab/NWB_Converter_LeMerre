@@ -79,30 +79,28 @@ def convert_data_to_nwb_pl(csv_file,
         converters.acquisition_to_nwb.add_acquisitions_3series(nwb_file, lfp_array=signal_LFP, electrode_region_all=electrode_table_region, channel_labels=labels, emg=EMG, eeg=EEG)  #same between Rewarded and NonRewarded sessions
 
 
-        if False:  
-            print("     o ⏸️ Add intervall container")
-            importlib.reload(converters.intervals_to_nwb)
-            if Rewarded:
-                converters.intervals_to_nwb.add_intervals_container_Rewarded(nwb_file=nwb_file, data=data, mat_file=mat_file)
-            #else:
-                #converters.intervals_to_nwb.add_intervals_container_NonRewarded(nwb_file=nwb_file, data=data, mat_file=mat_file)
-
         print("     o ⚙️ Add processing container") if i == 1 else None
         importlib.reload(converters.behavior_to_nwb)
         importlib.reload(converters.analysis_to_nwb)
         if Rewarded:
             print("         - Behavior data") if i == 1 else None
-            converters.behavior_to_nwb.add_behavior_container_Rewarded(nwb_file=nwb_file,csv_data_row=csv_data_row)
+            trial_onsets, stim_data , response_data_type, window_trial =converters.behavior_to_nwb.add_behavior_container_Rewarded(nwb_file=nwb_file,csv_data_row=csv_data_row)
+            info_trials = [trial_onsets, stim_data , response_data_type, window_trial]
         else:
             print("         - Behavior data") if i == 1 else None
             converters.behavior_to_nwb.add_behavior_container_NonRewarded(nwb_file=nwb_file,csv_data_row=csv_data_row)
 
         print("         - No ephys data for AN sessions") if i == 1 else None
         print("         - Analysis complementary information") if i == 1 else None
-        #converters.analysis_to_nwb.add_analysis_container(nwb_file=nwb_file, psth_window=psth_window, psth_bin=psth_bin , rewarded=Rewarded)  #same between Rewarded and NonRewarded sessions
+        #converters.analysis_to_nwb.add_analysis_container(nwb_file=nwb_file, psth_window=psth_window, rewarded=Rewarded)  #same between Rewarded and NonRewarded sessions
         #print("             > Added LFP_mean_across_all_units to analysis module") if i == 1 else None
         #print("             > Added global_LFP to analysis module") if i == 1 else None
         
+        print("     o ⏸️ Add intervall container")
+        importlib.reload(converters.intervals_to_nwb)
+        if Rewarded:
+            converters.intervals_to_nwb.add_intervals_container_Rewarded(nwb_file=nwb_file, info_trials = info_trials)
+
         importlib.reload(converters.nwb_saving)
         nwb_path = converters.nwb_saving.save_nwb_file(nwb_file=nwb_file, output_folder=output_folder) #same between Rewarded and NonRewarded sessions
 

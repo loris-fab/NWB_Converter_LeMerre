@@ -16,6 +16,7 @@ def add_behavior_container_Rewarded(nwb_file,csv_data_row):
     :param csv_data_row: a single row from the CSV file containing behavior data
     :return: None
     """
+    response_window = 2
 
     # 1. Created behavior processing module
     bhv_module = nwb_file.create_processing_module('behavior', 'contains behavioral processed data')
@@ -66,7 +67,6 @@ def add_behavior_container_Rewarded(nwb_file,csv_data_row):
     
     
     # --- Responses_times ---
-    response_window = 2
     reaction_times = np.array(list(map(float, csv_data_row["Responses_times"].split(";"))))
     Responses_tms_per_trial = []
     Responses_tms_per_trial_tms = []
@@ -123,7 +123,7 @@ def add_behavior_container_Rewarded(nwb_file,csv_data_row):
     #########################################################
     
 
-    return None
+    return trial_onsets, stim_data , response_data, response_window
 
 
 
