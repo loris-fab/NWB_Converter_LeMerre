@@ -99,7 +99,7 @@ def add_analysis_container(
         unit="volts",
         timestamps=lfp_times,
         description="Average LFP across all electrodes, aligned to stimulus",
-        comments="Mean of MeanLFP_all_electrodes across channels and averaged across trials; same window and alignment as PSTH."
+        comments="Mean of MeanLFP_all_electrodes across channels and averaged across trials"
     )
 
     # Add it to the analysis module

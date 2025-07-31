@@ -124,8 +124,8 @@ def convert_data_to_nwb_pl(csv_file,
             os.remove(output_path)
         
         # Stop after processing 2 sessions for testing purposes
-        if i == 1:
-            break
+        if i == 1 :
+            break 
     print("No forget to delete the testing purpose")
     print("**************************************************************************")
 
