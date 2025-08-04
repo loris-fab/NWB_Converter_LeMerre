@@ -49,6 +49,14 @@ def add_general_container(nwb_file, csv_data_row, regions):
         "FHC",
         "High-impedance sharp tungsten microelectrodes (10–12 MΩ), 75 μm shaft diameter; stereotaxically implanted individually. Model UEWSCGSELNND.",
     )
+
+    EMG_device = get_or_create_device(
+        "EMG Device",
+        "n.a",
+        "Custom-built EMG acquisition system connected to gold-wire electrodes",
+    )
+
+    
     eeg_device = get_or_create_device(
         "EEG Device",
         "N/A",
@@ -83,7 +91,7 @@ def add_general_container(nwb_file, csv_data_row, regions):
         "EMG",
         "Differential EMG from neck muscles; band-pass 10–20000 Hz.",
         "Neck muscles",
-        electrode_device,
+        EMG_device,
     )
     eeg_group = get_or_create_group(
         "EEG",

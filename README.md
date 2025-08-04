@@ -46,17 +46,9 @@ NWB\_converter\_LeMerre
 
 ## 🚀 Usage
 
-Create environment :
+Create environment and Install dependencies with::
 ```bash
-conda create -n nwb_env python=3.9
-
-conda activate nwb_env
-```
-
-Install dependencies with:
-
-```bash
-pip install -r requirement.txt
+conda env create -f environment.yml
 ```
 
 
