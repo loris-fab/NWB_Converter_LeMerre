@@ -61,15 +61,21 @@ pip install -r requirement.txt
 
 
 ## 🧩 How to use
-Run the following command in the terminal, replacing `csv_path` with the`.csv` file I created, located in the data storage of the LSENS laboratory at EPFL, and `output_folder` with the directory where you want the NWB file to be saved.
+Run the following command in the terminal, replacing `csv_path` with the`.csv` file I created, located in the data storage of the LSENS laboratory at EPFL, and `output_folder` with the directory where you want the NWB file to be saved. `--mouses_name` lets you specify one or more mouse names to process, separated by spaces (e.g., `--mouses_name PL200 PL201`).
+
 
 ```bash
-python convert_to_nwb_for_PL.py csv_path output_folder
+python convert_to_nwb_for_PL.py csv_path output_folder --mouses_name PL200 PL201 (...)
 ```
 *Options:*
 * `--mouses_name` : Name of the mouse/session to convert (default: all sessions)
 * `--psth_window`: time window for PSTH (default: -0.2 0.5 seconds)
 
+ for exemple :
+
+```bash
+python convert_to_nwb_for_PL.py Subject_Session_Selection.csv data --mouses_name PL200
+```
 
 
 If everything runs correctly, you should see an output similar to this:
