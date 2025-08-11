@@ -8,6 +8,8 @@ from pynwb import NWBFile
 from pynwb.file import Subject
 from scipy.io import loadmat
 import re
+from pathlib import Path
+from typing import List, Tuple, Optional, Sequence
 
 #############################################################################
 # Function that creates the nwb file object using all metadata
@@ -247,12 +249,12 @@ def files_to_config(csv_data_row,output_folder="data"):
 # Function that creates the csv file for the NWB conversion
 #############################################################################
 
-def files_to_csv(PL, PLALL, csv_file):
+def files_to_csv(PL, PLALL, dataframe):
 
-    csv_data = pd.read_csv(csv_file, sep=";")
+    csv_data = dataframe
     csv_data.columns = csv_data.columns.str.strip()
 
-    General_data = next((os.path.join(PL, f) for f in os.listdir(PL) if f.endswith('.mat')), None)
+    General_data = next((os.path.join(PL, f) for f in os.listdir(PL) if (f.endswith('.mat') and f.startswith("PL2"))), None)
 
     if General_data:
         General_data = loadmat(General_data)
@@ -266,8 +268,8 @@ def files_to_csv(PL, PLALL, csv_file):
     
     # information general
     _, id_session_indices = np.unique(General_data["LFP_Data"][0][0][4], return_index=True)
-    print(f"Number of sessions: {len(id_session_indices)}")
-    print(f"Number of files in PLALL: {len(sorted(os.listdir(PLALL)))}")
+    #print(f"Number of sessions: {len(id_session_indices)}")
+    #print(f"Number of files in PLALL: {len(sorted(os.listdir(PLALL)))}")
     mouse_name = str(General_data["LFP_Data"][0][0][0][0][0][0])
     strain = str(General_data["LFP_Data"][0][0][1][0][0][0])
     sex = str(General_data["LFP_Data"][0][0][2][0][0][0])
@@ -439,9 +441,9 @@ def files_to_csv(PL, PLALL, csv_file):
 
             # Append the new row to the DataFrame
             csv_data = pd.concat([csv_data, pd.DataFrame([new_row])], ignore_index=True)
-            print(f"Processing session file: {file_name}")
+            #print(f"Processing session file: {file_name}")
     # Save the updated DataFrame to the CSV file
-    csv_data.to_csv(csv_file, sep=';', index=False)
+    #csv_data.to_csv(csv_file, sep=';', index=False)
     return csv_data
 
 
@@ -456,3 +458,51 @@ def remove_nwb_files(folder_path):
                 os.remove(file_path)
             except Exception as e:
                 print(f"Erreur lors de la suppression de {file_path}: {e}")
+
+
+
+
+
+def find_pl_pairs(
+    path_folder1: str,
+    path_folder2: str,
+    mouse_names: Optional[Sequence[str]] = None,
+) -> List[Tuple[str, str]]:
+    """
+    Iterate subfolders in path_folder1.
+    - If mouse_names is None: keep folders whose name starts with 'PL2'.
+    - Else: keep only folders whose name is in mouse_names.
+    For each kept name, look for the same-named folder in path_folder2,
+    then take its 'RECORDING' subfolder as PLLA.
+
+    Returns:
+        List of (PL, PLLA):
+          - PL   = path to the folder in path_folder1
+          - PLLA = path to the matching folder's /RECORDING in path_folder2
+    """
+    p1, p2 = Path(path_folder1), Path(path_folder2)
+    pairs: List[Tuple[str, str]] = []
+    name_filter = set(mouse_names) if mouse_names else None
+
+    for d1 in sorted(p1.iterdir()):
+        if not d1.is_dir():
+            continue
+        name = d1.name
+
+        # Selection by explicit list or by prefix
+        if name_filter is not None:
+            if name not in name_filter or not name.startswith("PL2"):
+                continue
+        else:
+            if not name.startswith("PL2"):
+                continue
+
+        d2 = p2 / name
+        rec = d2 / "RECORDING"
+        if d2.is_dir() and rec.is_dir():
+            PL = str(d1.resolve())
+            PLLA = str(rec.resolve())
+            pairs.append((PL, PLLA))
+
+    return pairs
+
