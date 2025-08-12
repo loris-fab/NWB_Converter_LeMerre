@@ -8,25 +8,40 @@ from pynwb.epoch import TimeIntervals
 # Functions for converting intervals to NWB format for AN sessions
 ###############################################################
 
-def add_intervals_container_Rewarded(nwb_file, info_trials) -> None:
+def add_intervals_container_Rewarded(nwb_file,csv_data_row) -> None:
     """
     Add detailed trial information to the NWBFile for a rewarded whisker detection task.
     """
 
     # --- Extract trial data ---
-    trial_onsets = np.asarray(info_trials[0])
-    stim_indices = np.asarray(info_trials[1]).flatten().astype(bool)
-    response_data_type = np.asarray(info_trials[2]).flatten()
-    window_trial = float(info_trials[3])
+    trial_onsets = list(map(float, csv_data_row["Trial_onset"].split(";")))
+    stim_indices = list(map(bool, csv_data_row["stim_indices"].split(";")))
+    stim_amp = list(map(float, csv_data_row["stim_amp"].split(";")))
+    stim_onset = list(map(float, csv_data_row["stim_onset"].split(";")))
+    catch_onset = list(map(float, csv_data_row["catch_onset"].split(";")))
+    lick_flag = list(map(int, csv_data_row["lickflag"].split(";")))
+    response_data_type = list(map(float, csv_data_row["response_data"].split(";")))
+    response_window = 2
     n_trials = len(trial_onsets)
+    lick_time = list(map(float, csv_data_row["lick_time"].split(";")))
 
 
     # --- Define new trial columns ---
     new_columns = {
         'trial_type': 'stimulus Whisker vs no stimulus trial',
         'whisker_stim': '1 if whisker stimulus delivered, else 0',
-        #'response_window_start_time': 'Start of response window',
-        'ResponseType': 'Trial outcome label (Hit, Miss, etc.)',
+        'response_window_start_time': 'Start of response window',
+        'perf': '0= whisker miss; 1= whisker hit ; 2= correct rejection ; 3= false alarm',
+        "whisker_stim_amplitude": "Amplitude of the whisker stimulation between 0 and 5",
+        "whisker_stim_duration": "Duration of the whisker stimulation (ms)",
+        #"whisker_stim_time": "trial start time for whisker_stim=1 else NaN",
+        "no_stim" : "1 if no stimulus delivered, else 0",
+        #"no_stim_time": "trial start time for no_stim=1 (catch trial) else NaN",
+        "reward_available": "1 if reward is available, else 0",
+        "response_window_start_time": "Start of response window",
+        "response_window_stop_time": "Stop of response window",
+        "lick_flag": "1 if lick detected, else 0",
+        "lick_time": "Within response window lick time. Absolute time (s) relative to session start time"
     }
 
     # --- Add columns before inserting trials ---
@@ -45,11 +60,19 @@ def add_intervals_container_Rewarded(nwb_file, info_trials) -> None:
     for i in range(n_trials):
         nwb_file.add_trial(
             start_time=float(trial_onsets[i]),
-            stop_time=float(trial_onsets[i]) + window_trial,
+            stop_time=float(trial_onsets[i]) + response_window,
             trial_type='whisker_trial' if stim_indices[i] else 'no_whisker_trial',
             whisker_stim=int(stim_indices[i]),
-            #response_window_start_time=float(reaction_abs[i]),
-            ResponseType=response_data_type[i],
-            #lick_time=lick_time_per_trial[i]
+            perf=response_data_type[i],
+            #whisker_stim_time=stim_onset[i],
+            whisker_stim_amplitude=stim_amp[i],
+            whisker_stim_duration=str("1 (ms)"),
+            no_stim=int(not stim_indices[i]),
+            #no_stim_time=catch_onset[i],
+            reward_available=1,
+            response_window_start_time=float(trial_onsets[i]) + 0.05,
+            response_window_stop_time=float(trial_onsets[i]) + 1,
+            lick_flag=lick_flag[i],
+            lick_time=lick_time[i]
         )
 

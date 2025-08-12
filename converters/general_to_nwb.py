@@ -9,7 +9,7 @@ import pandas as pd
 
 
 
-def add_general_container(nwb_file, csv_data_row, regions):
+def add_general_container(nwb_file, regions):
     """
     Crée devices, groupes d’électrodes et électrodes (LFP/EMG/EEG),
     puis renvoie (electrode_table_region, channel_labels) dans l’ordre des colonnes de données.
@@ -42,7 +42,7 @@ def add_general_container(nwb_file, csv_data_row, regions):
     ampli_lfp = get_or_create_device(
         "Amplifier LFP",
         "A-M Systems",
-        "Extracellular amplifier for LFP recording - Model 3000 AC/DC Differential Amplifier (custom modified).",
+        " Differential extracellular amplifier for LFP recording - Model 3000 AC/DC Differential Amplifier (custom modified).",
     )
     electrode_device = get_or_create_device(
         "Tungsten Microelectrodes",
@@ -50,18 +50,6 @@ def add_general_container(nwb_file, csv_data_row, regions):
         "High-impedance sharp tungsten microelectrodes (10–12 MΩ), 75 μm shaft diameter; stereotaxically implanted individually. Model UEWSCGSELNND.",
     )
 
-    EMG_device = get_or_create_device(
-        "EMG Device",
-        "n.a",
-        "Custom-built EMG acquisition system connected to gold-wire electrodes",
-    )
-
-    
-    eeg_device = get_or_create_device(
-        "EEG Device",
-        "N/A",
-        "Surface electrodes for EEG recording (contralateral hemisphere).",
-    )
     digitizer = get_or_create_device(
         "Digitizer",
         "LDS Nicolet",
@@ -73,7 +61,6 @@ def add_general_container(nwb_file, csv_data_row, regions):
     # ##############################################################
     # 2. Create Electrode Group and Add electrodes to the NWB file
     # ##############################################################
-
     def get_or_create_group(name, description, location, device):
         if name in nwb_file.electrode_groups:
             return nwb_file.electrode_groups[name]
@@ -83,21 +70,9 @@ def add_general_container(nwb_file, csv_data_row, regions):
 
     lfp_group = get_or_create_group(
         "LFP",
-        "LFP via sharp tungsten microelectrodes (~10 MΩ). Ref: cerebellar silver wire; band-pass 0.1–1000 Hz.",
-        "Multiple (PtA, dCA1, mPFC, wM1, wS1, wS2, antM1) using interaural coordinates (Paxinos and Franklin 2008)",
+        "Local Field Potential (LFP) recorded via sharp tungsten microelectrodes (~10 MΩ) : Reference: cerebellar silver wire; band-pass filtering  0.1–1000 Hz.",
+        "2-6 areas from (PtA, dCA1, mPFC, wM1, antM1, wS1, wS2,) using interaural stereotaxic coordinates (Paxinos and Franklin 2008)",
         electrode_device,
-    )
-    emg_group = get_or_create_group(
-        "EMG",
-        "Differential EMG from neck muscles; band-pass 10–20000 Hz.",
-        "Neck muscles",
-        EMG_device,
-    )
-    eeg_group = get_or_create_group(
-        "EEG",
-        "Differential EEG from parietal and frontal; band-pass 0.1–1000 Hz.",
-        "Cortex dura (parietal & frontal) using interaural coordinates (Paxinos and Franklin 2008)",
-        eeg_device,
     )
 
 
@@ -111,10 +86,6 @@ def add_general_container(nwb_file, csv_data_row, regions):
         "mPFC": (5.8, 0.3, 1.85),
         "dCA1": (1.3, 2.0, 1.3),
         "antM1": (np.nan, np.nan, np.nan),
-    }
-    EEG_POS_MM = {
-        "parietal": (2.0, 1.5, 0.0),
-        "frontal":  (5.3, 1.5, 0.0),
     }
 
     def _last_row_index():
@@ -146,43 +117,10 @@ def add_general_container(nwb_file, csv_data_row, regions):
             filtering="0.1–1000 Hz band-pass",
             group=lfp_group,
             reference="Cerebellar silver wire",
-            group_name="LFP",
         )
         electrode_indices.append(_last_row_index())
         channel_labels.append(r)
 
-    # ---------- EMG (2 si présent) ----------
-    has_emg = pd.notna(csv_data_row.get("EMG", None))
-    if has_emg:
-        for i in range(2):
-            nwb_file.add_electrode(
-                x=np.nan, y=np.nan, z=np.nan,
-                imp=np.nan,
-                location="Neck muscles",
-                filtering="10–20000 Hz band-pass",
-                group=emg_group,
-                reference="Differential",
-                group_name="EMG",
-            )
-            electrode_indices.append(_last_row_index())
-            channel_labels.append(f"EMG{i+1}")
-
-    # ---------- EEG (2 si présent) ----------
-    has_eeg = pd.notna(csv_data_row.get("EEG", None))
-    if has_eeg:
-        for name in ("parietal", "frontal"):
-            ap, lat, depth = EEG_POS_MM[name]
-            nwb_file.add_electrode(
-                x=ap * MM, y=lat * MM, z=depth * MM,
-                imp=np.nan,
-                location=f"EEG {name} (contralateral; dura)",
-                filtering="0.1–1000 Hz band-pass",
-                group=eeg_group,
-                reference="Cerebellar silver wire",
-                group_name="EEG",
-            )
-            electrode_indices.append(_last_row_index())
-            channel_labels.append("EEG1" if name == "parietal" else "EEG2")
 
     # ##############################################################
     # 3. Return region 
@@ -190,7 +128,7 @@ def add_general_container(nwb_file, csv_data_row, regions):
 
     electrode_table_region = nwb_file.create_electrode_table_region(
         region=electrode_indices,
-        description="Electrodes used for LFP/EMG/EEG in this session (order matches data columns).",
+        description="Electrodes used for LFP in this session (order matches data columns).",
     )
 
     return electrode_table_region, channel_labels

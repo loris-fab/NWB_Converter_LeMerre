@@ -2,6 +2,7 @@ import numpy as np
 from pynwb.base import TimeSeries
 from pynwb.behavior import BehavioralEvents, BehavioralTimeSeries
 from pynwb import TimeSeries
+import pandas as pd
 
 
 ################################################################
@@ -17,6 +18,7 @@ def add_behavior_container_Rewarded(nwb_file,csv_data_row):
     :return: None
     """
     response_window = 2
+
 
     # 1. Created behavior processing module
     bhv_module = nwb_file.create_processing_module('behavior', 'contains behavioral processed data')
@@ -38,7 +40,7 @@ def add_behavior_container_Rewarded(nwb_file,csv_data_row):
         unit='n.a.',
         timestamps=trial_onsets,
         description='Timestamps marking the onset of each trial.',
-        comments='Encoded as 1 at each trial onset timestamp & the trial duration is 1 seconds.',
+        comments='time start of each trial',
         rate = None,
     )
     behavior_events.add_timeseries(ts_trial)
@@ -52,7 +54,6 @@ def add_behavior_container_Rewarded(nwb_file,csv_data_row):
             stim_data.append(1)
         elif stim not in stim_tms:
             stim_data.append(0)
-
 
     ts_stim_flags = TimeSeries(
         name='StimFlags',
@@ -121,6 +122,40 @@ def add_behavior_container_Rewarded(nwb_file,csv_data_row):
     #########################################################
     ### Add continuous traces  ###
     #########################################################
+    bts = bhv_module.data_interfaces.get('BehavioralTimeSeries')
+    if bts is None:
+        bts = BehavioralTimeSeries(name='BehavioralTimeSeries')
+        bhv_module.add(bts)
+
+    if pd.notna(csv_data_row["EMG"]):
+        EMG = list(map(float, csv_data_row["EMG"].split(";")))
+    else:
+        EMG = None
+
+    # ---------- EMG ----------
+    RATE = 2000.0
+    UNIT = "V"
+
+    if EMG is not None :
+        es_emg = TimeSeries(
+            name="ElectricalSeries_EMG",
+            data=EMG,
+            starting_time=0.0,
+            rate=RATE,
+            unit=UNIT,
+            description="EMG recorded differentially from 2 electrodes, resulting in a single EMG signal",
+            comments = "2000 Hz, in V."
+        )
+        bts.add_timeseries(es_emg)
+
+    trial_onsets = list(map(float, csv_data_row["Trial_onset"].split(";")))
+    stim_tms = list(map(float, csv_data_row["stim_onset"].split(";")))  
+    stim_data = list()
+    for stim in trial_onsets:
+        if stim in stim_tms:
+            stim_data.append(1)
+        elif stim not in stim_tms:
+            stim_data.append(0)
     
 
     return trial_onsets, stim_data , response_data, response_window
@@ -147,7 +182,7 @@ def add_behavior_container_NonRewarded(nwb_file,csv_data_row):
     behavior_events = BehavioralEvents(name='BehavioralEvents')
     bhv_module.add_data_interface(behavior_events)
 
-    """
+    
     # --- TRIAL ONSETS ---
     trial_onsets = list(map(float, csv_data_row["Trial_onset"].split(";")))
     ts_trial = TimeSeries(
@@ -160,7 +195,7 @@ def add_behavior_container_NonRewarded(nwb_file,csv_data_row):
         rate = None,
     )
     behavior_events.add_timeseries(ts_trial)
-    """
+    
 
     # --- STIMULATION ---    
     stim_tms = list(map(float, csv_data_row["stim_onset"].split(";")))  
@@ -189,5 +224,34 @@ def add_behavior_container_NonRewarded(nwb_file,csv_data_row):
         comments = "Encoded as 1 at each valve activation timestamp. The whisker stimulus was not correlated to the delivery of the reward, therefore, no association between the stimulus and the delivery of the reward could be made.",
     )
     behavior_events.add_timeseries(ts_reaction)
+
+    #########################################################
+    ### Add continuous traces  ###
+    #########################################################
+    bts = bhv_module.data_interfaces.get('BehavioralTimeSeries')
+    if bts is None:
+        bts = BehavioralTimeSeries(name='BehavioralTimeSeries')
+        bhv_module.add(bts)
+
+    if pd.notna(csv_data_row["EMG"]):
+        EMG = list(map(float, csv_data_row["EMG"].split(";")))
+    else:
+        EMG = None
+
+    # ---------- EMG ----------
+    RATE = 2000.0
+    UNIT = "V"
+
+    if EMG is not None :
+        es_emg = TimeSeries(
+            name="ElectricalSeries_EMG",
+            data=EMG,
+            starting_time=0.0,
+            rate=RATE,
+            unit=UNIT,
+            description="EMG recorded differentially from 2 electrodes, resulting in a single EMG signal",
+            comments = "2000 Hz, in V."
+        )
+        bts.add_timeseries(es_emg)
 
     return None

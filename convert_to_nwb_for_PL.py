@@ -23,13 +23,13 @@ import gc
 #############################################################
 
 
-def convert_data_to_nwb_pl(output_folder, mouses_name = None):
+def convert_data_to_nwb_pl(output_folder,Folder_sessions_info, Folder_general_info = "/Volumes/Petersen-Lab/publications/2018/2018_LeMerre_Neuron/2018_LeMerre_Neuron_data/processed_data",mouses_name=None, ):
 
 
-
+    # Find pairs of processed and raw data files 
     importlib.reload(converters.Initiation_nwb)
-    pairs = converters.Initiation_nwb.find_pl_pairs("/Volumes/Petersen-Lab/publications/2018/2018_LeMerre_Neuron/2018_LeMerre_Neuron_data/processed_data", "/Volumes/Petersen-Lab/publications/2018/2018_LeMerre_Neuron/2018_LeMerre_Neuron_data/raw_data", mouse_names=mouses_name)
-
+    pairs = converters.Initiation_nwb.find_pl_pairs(Folder_general_info, Folder_sessions_info, mouse_names=mouses_name)
+    #print("pairs:", pairs)
     csv_data = pd.DataFrame(columns=['Mouse Name', 'User (user_userName)', 'Ear tag',
        'Start date (dd.mm.yy)', 'End date', 'Sex_bin', 'strain', 'mutations',
        'Birth date', 'licence', 'DG', 'ExpEnd', 'Created on', 'Session',
@@ -42,10 +42,12 @@ def convert_data_to_nwb_pl(output_folder, mouses_name = None):
 
     print("**************************************************************************")
     print("-_-_-_-_-_-_-_-_-_-_-_-_-_-_- NWB conversion _-_-_-_-_-_-_-_-_-_-_-_-_-_-_")
+    # Loop through each pair of processed and raw data files
     for pair in tqdm(pairs, desc="Loading data ..."):
         PL, PLLA = pair
-        csv_data = converters.Initiation_nwb.files_to_csv(PL, PLLA, csv_data)
+        csv_data = converters.Initiation_nwb.files_to_dataframe(PL, PLLA, csv_data)
     gc.collect()
+    #display("Dataframe after loading:", csv_data)
 
     if mouses_name is None:
         mouses_name = csv_data["Mouse Name"].unique().tolist()
@@ -59,13 +61,14 @@ def convert_data_to_nwb_pl(output_folder, mouses_name = None):
     all_sessions = csv_data["Session"]
     
 
-    #print("Converting data to NWB format for mouse:", list(all_sessions))
-    failures = []  # (mouse_name, row_idx, err_msg)
+    print("Converting data to NWB format for mouse:", list(np.unique(csv_data["Mouse Name"])))
+    failures = []  # (mouse_name, err_msg)
     bar = tqdm(total=len(csv_data), desc="Processing ")
     for _, csv_data_row in csv_data.iterrows():
         bar.set_postfix_str(str(csv_data_row["Mouse Name"])) 
         bar.update(1)
-        try:
+        #try:
+        if True:
             if csv_data_row["Behavior Type"] == "Detection Task":
                 Rewarded = True
             elif csv_data_row["Behavior Type"] == "Neutral Exposition":
@@ -83,31 +86,34 @@ def convert_data_to_nwb_pl(output_folder, mouses_name = None):
 
             # o 📌 Add general metadata
             importlib.reload(converters.acquisition_to_nwb)
-            signal_LFP, regions, EMG, EEG = converters.acquisition_to_nwb.extract_lfp_signal(csv_data_row=csv_data_row)
-            electrode_table_region, labels = converters.general_to_nwb.add_general_container(nwb_file=nwb_file, csv_data_row=csv_data_row, regions=regions)  #same between Rewarded and NonRewarded sessions
+            signal_LFP, regions= converters.acquisition_to_nwb.extract_lfp_signal(csv_data_row=csv_data_row)
+            electrode_table_region, labels = converters.general_to_nwb.add_general_container(nwb_file=nwb_file, regions=regions)  #same between Rewarded and NonRewarded sessions
 
             # o 📶 Add acquisition container
-            converters.acquisition_to_nwb.add_acquisitions_3series(nwb_file=nwb_file, lfp_array=signal_LFP, electrode_region_all=electrode_table_region, channel_labels=labels, emg=EMG, eeg=EEG)  #same between Rewarded and NonRewarded sessions
+            converters.acquisition_to_nwb.add_acquisitions_3series(nwb_file=nwb_file, lfp_array=signal_LFP, electrode_region_all=electrode_table_region, channel_labels=labels)  #same between Rewarded and NonRewarded sessions
 
 
-            # o ⚙️ Add processing container
-            importlib.reload(converters.behavior_to_nwb)
-            importlib.reload(converters.analysis_to_nwb)
-            if Rewarded:
-                # Behavior data
-                trial_onsets, stim_data , response_data_type, window_trial =converters.behavior_to_nwb.add_behavior_container_Rewarded(nwb_file=nwb_file,csv_data_row=csv_data_row)
-                info_trials = [trial_onsets, stim_data , response_data_type, window_trial]
-            else:
-                # Behavior data
-                converters.behavior_to_nwb.add_behavior_container_NonRewarded(nwb_file=nwb_file,csv_data_row=csv_data_row)
 
-            # No ephys data for AN sessions
-
-            
             # o ⏸️ Add intervall container
             importlib.reload(converters.intervals_to_nwb)
             if Rewarded:
-                converters.intervals_to_nwb.add_intervals_container_Rewarded(nwb_file=nwb_file, info_trials = info_trials)
+                converters.intervals_to_nwb.add_intervals_container_Rewarded(nwb_file=nwb_file,csv_data_row=csv_data_row)
+                pass
+
+            # o ⚙️ Add processing container
+            importlib.reload(converters.behavior_to_nwb)
+            if Rewarded:
+                # Behavior data
+                ##trial_onsets, stim_data , response_data_type, window_trial =converters.behavior_to_nwb.add_behavior_container_Rewarded(nwb_file=nwb_file,csv_data_row=csv_data_row)
+                #info_trials = [trial_onsets, stim_data , response_data_type, window_trial]
+                pass
+            else:
+                # Behavior data
+                #converters.behavior_to_nwb.add_behavior_container_NonRewarded(nwb_file=nwb_file,csv_data_row=csv_data_row)
+                pass
+            # No ephys data for AN sessions
+
+            
 
             # 🔎 Validating NWB file and saving...
             importlib.reload(converters.nwb_saving)
@@ -128,14 +134,18 @@ def convert_data_to_nwb_pl(output_folder, mouses_name = None):
             # Delete .yaml config file 
             if os.path.exists(output_path):
                 os.remove(output_path)
-
+        """
         except Exception as e:
             failures.append((csv_data_row["Mouse Name"], str(e)))
             continue
         finally:
             bar.update(1)
         gc.collect()
-        
+    if len(failures) > 0:
+            print(f"⚠️ Conversion completed with errors for {len(failures)} files")
+            for i, (mouse_name, error) in enumerate(failures):
+                print(f"    - {mouse_name}: {error}")
+        """
     bar.close()
     for f in Path(output_folder).glob("*.yaml"):  
         f.unlink()
