@@ -67,8 +67,7 @@ def convert_data_to_nwb_pl(output_folder,Folder_sessions_info, Folder_general_in
     for _, csv_data_row in csv_data.iterrows():
         bar.set_postfix_str(str(csv_data_row["Mouse Name"])) 
         bar.update(1)
-        #try:
-        if True:
+        try:
             if csv_data_row["Behavior Type"] == "Detection Task":
                 Rewarded = True
             elif csv_data_row["Behavior Type"] == "Neutral Exposition":
@@ -119,7 +118,6 @@ def convert_data_to_nwb_pl(output_folder,Folder_sessions_info, Folder_general_in
             # Delete .yaml config file 
             if os.path.exists(output_path):
                 os.remove(output_path)
-        """
         except Exception as e:
             failures.append((csv_data_row["Session"], str(e)))
             continue
@@ -130,7 +128,7 @@ def convert_data_to_nwb_pl(output_folder,Folder_sessions_info, Folder_general_in
             print(f"⚠️ Conversion completed with errors for {len(failures)} files")
             for i, (mouse_name, error) in enumerate(failures):
                 print(f"    - {mouse_name}: {error}")
-        """
+
     bar.close()
     for f in Path(output_folder).glob("*.yaml"):  
         f.unlink()
