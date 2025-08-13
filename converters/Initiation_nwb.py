@@ -18,11 +18,18 @@ import mat73 as mat73
 
 def create_nwb_file_an(config_file):
     """
-    Create an NWB file object using all metadata containing in YAML file
+    Create an NWBFile from a YAML configuration.
 
     Args:
-        config_file (str): Absolute path to YAML file containing the subject experimental metadata
+        config_file (str): Absolute path to a YAML file containing
+            "subject_metadata" and "session_metadata" sections.
 
+    Returns:
+        pynwb.file.NWBFile: The in-memory NWB file object.
+        None: If the YAML cannot be read or required fields are missing.
+
+    Raises:
+        ValueError: If NWB file creation fails after parsing the config.
     """
 
     try:
@@ -101,6 +108,18 @@ def create_nwb_file_an(config_file):
 
 
 def files_to_config(csv_data_row,output_folder="data"):
+    """
+    Build a session/subject NWB config from one CSV row and save it as YAML.
+
+    Args:
+        csv_data_row (pandas.Series or Mapping): Row with fields such as
+            "Mouse Name", "Session", "Session Date (yyymmdd)", "Start Time (hhmmss)",
+            "Behavior Type", etc.
+        output_folder (str or pathlib.Path): Folder where the YAML file is saved.
+
+    Returns:
+        tuple[str, dict]: (output_path to the written YAML file, in-memory config dict).
+    """
     related_publications = 'Le Merre P, Esmaeili V, Charrière E, Galan K, Salin PA, Petersen CCH, Crochet S. Reward-Based Learning Drives Rapid Sensory Signals in Medial Prefrontal Cortex and Dorsal Hippocampus Necessary for Goal-Directed Behavior. Neuron. 2018 Jan 3;97(1):83-91.e5. doi: 10.1016/j.neuron.2017.11.031. Epub 2017 Dec 14. PMID: 29249287; PMCID: PMC5766832.'
     
 
@@ -113,8 +132,6 @@ def files_to_config(csv_data_row,output_folder="data"):
     ###  Session metadata extraction  ###
 
     ### Experiment_description
-    #date_experience = pd.to_datetime(date, format='%Y%m%d')
-
     ref_weight = subject_info.get("Weight of Reference", "")
     if pd.isna(ref_weight) or str(ref_weight).strip().lower() in ["", "nan"]:
         ref_weight = 'na'
@@ -169,8 +186,6 @@ def files_to_config(csv_data_row,output_folder="data"):
     age = subject_info["Mouse Age (d)"] 
     if age == "Unknown":
         age = 'na'
-    #age = f"P{age}D"
-
 
     ### Genotype 
     genotype = subject_info.get("mutations", "")
@@ -255,9 +270,31 @@ def files_to_config(csv_data_row,output_folder="data"):
 #############################################################################
 
 def remove_rows_by_mouse_name(df, mouse_name):
+    """
+    Return a copy of the DataFrame without rows matching a given mouse name.
+
+    Args:
+        df (pandas.DataFrame): Input table.
+        mouse_name (str): Exact value to remove from the "Mouse Name" column.
+
+    Returns:
+        pandas.DataFrame: Filtered DataFrame.
+    """
     return df[df["Mouse Name"] != mouse_name]
 
 def remove_nwb_files(folder_path):
+    """
+    Delete all .nwb files in a folder (best-effort, non-recursive).
+
+    Args:
+        folder_path (str or pathlib.Path): Directory to scan.
+
+    Returns:
+        None
+
+    Notes:
+        Prints an error message for files that cannot be removed.
+    """
     for filename in os.listdir(folder_path):
         if filename.endswith('.nwb'):
             file_path = os.path.join(folder_path, filename)
@@ -271,6 +308,28 @@ def find_pl_pairs(
     path_folder2: str,
     mouse_names: Optional[Sequence[str]] = None,
 ) -> List[Tuple[str, str]]:
+    """
+    Match PL mouse folders with the corresponding WR group folder.
+
+    This scans `path_folder1` for subfolders whose names start with "PL2"
+    (optionally filtered by `mouse_names`). For each mouse name, it searches
+    in `path_folder2/"WR+ mice"` first, then `path_folder2/"WR- mice"`, for
+    any file whose name starts with that mouse name. It returns the pair:
+    (absolute path to the PL folder, absolute path to the matched WR folder).
+
+    Args:
+        path_folder1 (str): Root directory containing PL mouse folders.
+        path_folder2 (str): Root directory containing "WR+ mice" / "WR- mice".
+        mouse_names (Sequence[str], optional): Subset of mouse names to keep.
+
+    Returns:
+        list[tuple[str, str]]: List of (pl_dir, wr_dir) absolute paths.
+
+    Raises:
+        FileNotFoundError: If no file starting with the mouse name is found
+            in either "WR+ mice" or "WR- mice".
+    """
+
     p1, p2 = Path(path_folder1), Path(path_folder2)
     pairs: List[Tuple[str, str]] = []
     name_filter = set(mouse_names) if mouse_names else None
@@ -320,7 +379,22 @@ def find_pl_pairs(
 
 
 def files_to_dataframe(PL, PLALL, dataframe):
-    
+    """
+    Append session rows to a DataFrame from PL general info and per-session .mat files.
+
+    It reads one general .mat in `PL` (SciPy loadmat) and iterates over session
+    files in `PLALL` (Matlab v7.3 via mat73). It extracts metadata (dates,
+    behavior type, stim/catch onsets, lick flags/times, signals) and appends a
+    row per session to `dataframe`.
+
+    Args:
+        PL (str or pathlib.Path): Folder with the general .mat file.
+        PLALL (str or pathlib.Path): Folder with per-session .mat files for that mouse.
+        dataframe (pandas.DataFrame): Existing table to extend.
+
+    Returns:
+        pandas.DataFrame: The input DataFrame with appended session rows.
+    """
     csv_data = dataframe
     csv_data.columns = csv_data.columns.str.strip()
 
@@ -356,184 +430,188 @@ def files_to_dataframe(PL, PLALL, dataframe):
             raise ValueError(f"No number found in a .mat file: {file_name}")
         return -1
     i = -1
-    for  file_name in sorted(os.listdir(PLALL), key=extract_number):
-        file_path = os.path.join(PLALL, file_name)
-        if os.path.isfile(file_path) and file_name.endswith('.mat') and file_name.startswith(mouse_name):
-            i += 1
-            pli = mat73.loadmat(file_path)
-            # Start date
-            ## dd
-            dd = str(General_data["LFP_Data"][0][0][5][id_session_indices[i]][2][0][0])
-            if len(dd) == 1:
-                dd = "0" + dd
-            ## mm
-            mm = str(General_data["LFP_Data"][0][0][5][id_session_indices[i]][1][0][0])
-            if len(mm) == 1:
-                mm = "0" + mm
-            ## yy
-            yy = str(General_data["LFP_Data"][0][0][5][id_session_indices[i]][0][0][0])
+    try: 
+        for  file_name in sorted(os.listdir(PLALL), key=extract_number):
+            file_path = os.path.join(PLALL, file_name)
+            if os.path.isfile(file_path) and file_name.endswith('.mat') and file_name.startswith(mouse_name):
+                i += 1
+                pli = mat73.loadmat(file_path)
+                # Start date
+                ## dd
+                dd = str(General_data["LFP_Data"][0][0][5][id_session_indices[i]][2][0][0])
+                if len(dd) == 1:
+                    dd = "0" + dd
+                ## mm
+                mm = str(General_data["LFP_Data"][0][0][5][id_session_indices[i]][1][0][0])
+                if len(mm) == 1:
+                    mm = "0" + mm
+                ## yy
+                yy = str(General_data["LFP_Data"][0][0][5][id_session_indices[i]][0][0][0])
 
-            start_date = dd + "." + mm + "." + yy
-            start_date_2 = yy + mm + dd
-            End_date = start_date
+                start_date = dd + "." + mm + "." + yy
+                start_date_2 = yy + mm + dd
+                End_date = start_date
 
-            session = mouse_name + "_" + start_date_2
+                session = mouse_name + "_" + start_date_2
 
-            # Start time (hhmmss)
-            ## hh
-            hh = str(General_data["LFP_Data"][0][0][5][id_session_indices[i]][3][0][0])
-            if len(hh) == 1:
-                hh = "0" + hh
-            ## mm
-            mm = str(General_data["LFP_Data"][0][0][5][id_session_indices[i]][4][0][0])
-            if len(mm) == 1:
-                mm = "0" + mm
-            ## ss
-            ss = str(General_data["LFP_Data"][0][0][5][id_session_indices[i]][5][0][0])
-            if len(str(int(float(ss)))) == 1:
-                ss = "0" + str(int(float(ss)))
-            else:
-                ss = str(int(float(ss)))
+                # Start time (hhmmss)
+                ## hh
+                hh = str(General_data["LFP_Data"][0][0][5][id_session_indices[i]][3][0][0])
+                if len(hh) == 1:
+                    hh = "0" + hh
+                ## mm
+                mm = str(General_data["LFP_Data"][0][0][5][id_session_indices[i]][4][0][0])
+                if len(mm) == 1:
+                    mm = "0" + mm
+                ## ss
+                ss = str(General_data["LFP_Data"][0][0][5][id_session_indices[i]][5][0][0])
+                if len(str(int(float(ss)))) == 1:
+                    ss = "0" + str(int(float(ss)))
+                else:
+                    ss = str(int(float(ss)))
+                    
+                start_time = hh + mm +  ss
+
+                # Behavior type
+                behaviortype = str(General_data["LFP_Data"][0][0][6][id_session_indices[i]][0][0])
+                if behaviortype == "DT":
+                    behaviortype = "Detection Task"
+                elif behaviortype == "X":
+                    behaviortype = "Neutral Exposition"
+                else:
+                    raise ValueError(f"Unknown behavior type: {behaviortype}")
+
+
+
+                # Stim_times
+                stim_onset= np.asarray(pli["Performance"]["data"].T[3])
+    
+                #reward_onset  
+                reward_onset = np.asarray(pli["Valve_times"]["data"]/1000)
+
+                # trial_onset
+                Trial_onset = np.asarray(pli["Performance"]["data"].T[0])
+
+                #stim_indice
+                stim_indices = np.asarray(pli["Performance"]["data"].T[1]).flatten()
+                #stim_amp
+                stim_amp = np.asarray(pli["Performance"]["data"].T[2]).flatten()
+
+                # Catch_times
+                catch_onset = [np.nan if el in Trial_onset else el for el in stim_onset]
                 
-            start_time = hh + mm +  ss
+                #Response_data
+                response_data = np.asarray(pli["Performance"]["data"].T[8]).flatten()
 
-            # Behavior type
-            behaviortype = str(General_data["LFP_Data"][0][0][6][id_session_indices[i]][0][0])
-            if behaviortype == "DT":
-                behaviortype = "Detection Task"
-            elif behaviortype == "X":
-                behaviortype = "Neutral Exposition"
-            else:
-                raise ValueError(f"Unknown behavior type: {behaviortype}")
+                #lickflag
+                lickflag = np.asarray(pli["Performance"]["data"].T[6]).flatten().astype(int)
 
-
-
-            # Stim_times
-            stim_onset= np.asarray(pli["Performance"]["data"].T[3])
-   
-            #reward_onset  
-            reward_onset = np.asarray(pli["Valve_times"]["data"]/1000)
-
-            # trial_onset
-            Trial_onset = np.asarray(pli["Performance"]["data"].T[0])
-
-            #stim_indice
-            stim_indices = np.asarray(pli["Performance"]["data"].T[1]).flatten()
-            #stim_amp
-            stim_amp = np.asarray(pli["Performance"]["data"].T[2]).flatten()
-
-            # Catch_times
-            catch_onset = [np.nan if el in Trial_onset else el for el in stim_onset]
-            
-            #Response_data
-            response_data = np.asarray(pli["Performance"]["data"].T[8]).flatten()
-
-            #lickflag
-            lickflag = np.asarray(pli["Performance"]["data"].T[6]).flatten().astype(int)
-
-            #licktime 
-            lick_time = np.asarray(pli["Performance"]["data"].T[7]).flatten()
-            
-            #EMG
-            if "EMG" in pli.keys():
-                EMG = np.asarray(pli["EMG"]["data"]).flatten()
-            else:
-                EMG = np.nan
+                #licktime 
+                lick_time = np.asarray(pli["Performance"]["data"].T[7]).flatten()
                 
-            # PtA
-            if "PtA" in pli.keys():
-                PtA= np.asarray(pli["PtA"]["data"]).flatten()
-            else:
-                PtA = np.nan
+                #EMG
+                if "EMG" in pli.keys():
+                    EMG = np.asarray(pli["EMG"]["data"]).flatten()
+                else:
+                    EMG = np.nan
+                    
+                # PtA
+                if "PtA" in pli.keys():
+                    PtA= np.asarray(pli["PtA"]["data"]).flatten()
+                else:
+                    PtA = np.nan
 
-            # dCA1
-            if "dCA1" in pli.keys():
-                dCA1= np.asarray(pli["dCA1"]["data"]).flatten()
-            else:
-                dCA1 = np.nan
+                # dCA1
+                if "dCA1" in pli.keys():
+                    dCA1= np.asarray(pli["dCA1"]["data"]).flatten()
+                else:
+                    dCA1 = np.nan
 
-            # mPFC
-            if "mPFC" in pli.keys():
-                mPFC= np.asarray(pli["mPFC"]["data"]).flatten()
-            else:
-                mPFC = np.nan
+                # mPFC
+                if "mPFC" in pli.keys():
+                    mPFC= np.asarray(pli["mPFC"]["data"]).flatten()
+                else:
+                    mPFC = np.nan
 
-            # wM1
-            if "wM1" in pli.keys():
-                wM1= np.asarray(pli["wM1"]["data"]).flatten()
-            else:
-                wM1 = np.nan
+                # wM1
+                if "wM1" in pli.keys():
+                    wM1= np.asarray(pli["wM1"]["data"]).flatten()
+                else:
+                    wM1 = np.nan
 
-            # wS1
-            if "wS1" in pli.keys():
-                wS1= np.asarray(pli["wS1"]["data"]).flatten()
-            else:
-                wS1 = np.nan
+                # wS1
+                if "wS1" in pli.keys():
+                    wS1= np.asarray(pli["wS1"]["data"]).flatten()
+                else:
+                    wS1 = np.nan
 
-            # wS2
-            if "wS2" in pli.keys():
-                wS2= np.asarray(pli["wS2"]["data"]).flatten()
-            else:
-                wS2 = np.nan
-
-
-            if "antM1" in pli.keys():
-                antM1 = np.asarray(pli["antM1"]["data"]).flatten()
-            else:
-                antM1 = np.nan
-
-            if "EEG" in pli.keys():
-                EEG = np.asarray(pli["EEG"]["data"]).flatten()
-            else:
-                EEG = np.nan
+                # wS2
+                if "wS2" in pli.keys():
+                    wS2= np.asarray(pli["wS2"]["data"]).flatten()
+                else:
+                    wS2 = np.nan
 
 
+                if "antM1" in pli.keys():
+                    antM1 = np.asarray(pli["antM1"]["data"]).flatten()
+                else:
+                    antM1 = np.nan
 
-            # Create a new row for the session
-            new_row = {
-                "Mouse Name": mouse_name,
-                "User (user_userName)": "PL",
-                "Ear tag": "Unknown",
-                "Start date (dd.mm.yy)": start_date,
-                "End date": End_date,
-                "Sex_bin": sex,
-                "strain": strain,
-                "mutations": "",
-                "Birth date": birth_date,
-                "licence": "DR2013-47",
-                "DG": "",
-                "ExpEnd": "",
-                "Created on": "Unknown",
-                "Session": session,
-                "Session Date (yyymmdd)": start_date_2,
-                "Start Time (hhmmss)": start_time,
-                "Behavior Type": behaviortype,
-                "Session Type": "Whisker Rewarded",
-                "Mouse Age (d)": "Unknown",
-                "Weight of Reference": "Unknown",
-                "Weight Session": "Unknown",
-                "Trial_onset" : ';'.join(map(str, Trial_onset)),
-                "stim_indices": ';'.join(map(str, stim_indices)),
-                "stim_onset": ';'.join(map(str, stim_onset)),
-                "catch_onset": ';'.join(map(str, catch_onset)),
-                "stim_amp": ';'.join(map(str, stim_amp)),
-                "lickflag": ';'.join(map(str, lickflag)),
-                "lick_time": ';'.join(map(str, lick_time)),
-                "reward_onset": ';'.join(map(str, reward_onset)),
-                "PiezoLickSignal": ';'.join(map(str, np.asarray(pli["lick"]["data"]))),
-                "response_data": ';'.join(map(str, response_data)) ,
-                "EMG": ';'.join(map(str, EMG)) if not (isinstance(EMG, float) and np.isnan(EMG)) else np.nan,
-                "PtA": ';'.join(map(str, PtA)) if not (isinstance(PtA, float) and np.isnan(PtA)) else np.nan,
-                "dCA1": ';'.join(map(str, dCA1)) if not (isinstance(dCA1, float) and np.isnan(dCA1)) else np.nan,
-                "mPFC": ';'.join(map(str, mPFC)) if not (isinstance(mPFC, float) and np.isnan(mPFC)) else np.nan,
-                "wM1": ';'.join(map(str, wM1)) if not (isinstance(wM1, float) and np.isnan(wM1)) else np.nan,
-                "wS1": ';'.join(map(str, wS1)) if not (isinstance(wS1, float) and np.isnan(wS1)) else np.nan,
-                "wS2": ';'.join(map(str, wS2)) if not (isinstance(wS2, float) and np.isnan(wS2)) else np.nan,
-                "antM1": ';'.join(map(str, antM1)) if not (isinstance(antM1, float) and np.isnan(antM1)) else np.nan,
-                "EEG": ';'.join(map(str, EEG)) if not (isinstance(EEG, float) and np.isnan(EEG)) else np.nan,
-            }
+                if "EEG" in pli.keys():
+                    EEG = np.asarray(pli["EEG"]["data"]).flatten()
+                else:
+                    EEG = np.nan
 
-            # Append the new row to the DataFrame
-            csv_data = pd.concat([csv_data, pd.DataFrame([new_row])], ignore_index=True)
-            #print(f"Processing session file: {file_name}")
+
+
+                # Create a new row for the session
+                new_row = {
+                    "Mouse Name": mouse_name,
+                    "User (user_userName)": "PL",
+                    "Ear tag": "Unknown",
+                    "Start date (dd.mm.yy)": start_date,
+                    "End date": End_date,
+                    "Sex_bin": sex,
+                    "strain": strain,
+                    "mutations": "",
+                    "Birth date": birth_date,
+                    "licence": "DR2013-47",
+                    "DG": "",
+                    "ExpEnd": "",
+                    "Created on": "Unknown",
+                    "Session": session,
+                    "Session Date (yyymmdd)": start_date_2,
+                    "Start Time (hhmmss)": start_time,
+                    "Behavior Type": behaviortype,
+                    "Session Type": "Whisker Rewarded",
+                    "Mouse Age (d)": "Unknown",
+                    "Weight of Reference": "Unknown",
+                    "Weight Session": "Unknown",
+                    "Trial_onset" : ';'.join(map(str, Trial_onset)),
+                    "stim_indices": ';'.join(map(str, stim_indices)),
+                    "stim_onset": ';'.join(map(str, stim_onset)),
+                    "catch_onset": ';'.join(map(str, catch_onset)),
+                    "stim_amp": ';'.join(map(str, stim_amp)),
+                    "lickflag": ';'.join(map(str, lickflag)),
+                    "lick_time": ';'.join(map(str, lick_time)),
+                    "reward_onset": ';'.join(map(str, reward_onset)),
+                    "PiezoLickSignal": ';'.join(map(str, np.asarray(pli["lick"]["data"]))),
+                    "response_data": ';'.join(map(str, response_data)) ,
+                    "EMG": ';'.join(map(str, EMG)) if not (isinstance(EMG, float) and np.isnan(EMG)) else np.nan,
+                    "PtA": ';'.join(map(str, PtA)) if not (isinstance(PtA, float) and np.isnan(PtA)) else np.nan,
+                    "dCA1": ';'.join(map(str, dCA1)) if not (isinstance(dCA1, float) and np.isnan(dCA1)) else np.nan,
+                    "mPFC": ';'.join(map(str, mPFC)) if not (isinstance(mPFC, float) and np.isnan(mPFC)) else np.nan,
+                    "wM1": ';'.join(map(str, wM1)) if not (isinstance(wM1, float) and np.isnan(wM1)) else np.nan,
+                    "wS1": ';'.join(map(str, wS1)) if not (isinstance(wS1, float) and np.isnan(wS1)) else np.nan,
+                    "wS2": ';'.join(map(str, wS2)) if not (isinstance(wS2, float) and np.isnan(wS2)) else np.nan,
+                    "antM1": ';'.join(map(str, antM1)) if not (isinstance(antM1, float) and np.isnan(antM1)) else np.nan,
+                    "EEG": ';'.join(map(str, EEG)) if not (isinstance(EEG, float) and np.isnan(EEG)) else np.nan,
+                }
+
+                # Append the new row to the DataFrame
+                csv_data = pd.concat([csv_data, pd.DataFrame([new_row])], ignore_index=True)
+                print(f"Processing session file: {file_name}")
+    except Exception as e:
+        print(f"Error processing session file {file_name}: {e}")
+        
     return csv_data

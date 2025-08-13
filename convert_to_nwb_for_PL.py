@@ -40,7 +40,7 @@ def convert_data_to_nwb_pl(output_folder,Folder_sessions_info, Folder_general_in
         PL, PLLA = pair
         csv_data = converters.Initiation_nwb.files_to_dataframe(PL, PLLA, csv_data)
     gc.collect()
-    #display("Dataframe after loading:", csv_data)
+
 
     if mouses_name is None:
         mouses_name = csv_data["Mouse Name"].unique().tolist()
