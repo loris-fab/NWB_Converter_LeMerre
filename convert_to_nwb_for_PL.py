@@ -30,14 +30,7 @@ def convert_data_to_nwb_pl(output_folder,Folder_sessions_info, Folder_general_in
     importlib.reload(converters.Initiation_nwb)
     pairs = converters.Initiation_nwb.find_pl_pairs(Folder_general_info, Folder_sessions_info, mouse_names=mouses_name)
     #print("pairs:", pairs)
-    csv_data = pd.DataFrame(columns=['Mouse Name', 'User (user_userName)', 'Ear tag',
-       'Start date (dd.mm.yy)', 'End date', 'Sex_bin', 'strain', 'mutations',
-       'Birth date', 'licence', 'DG', 'ExpEnd', 'Created on', 'Session',
-       'Session Date (yyymmdd)', 'Start Time (hhmmss)', 'Behavior Type',
-       'Session Type', 'Mouse Age (d)', 'Weight of Reference',
-       'Weight Session', 'Trial_onset', 'stim_onset', 'catch_onset',
-       'Responses_times', 'EMG', 'PtA', 'dCA1', 'mPFC', 'wM1', 'wS1', 'wS2',
-       'antM1', 'EEG'])
+    csv_data = pd.DataFrame(columns=['Mouse Name'])
     csv_data.columns = csv_data.columns.str.strip() 
 
     print("**************************************************************************")
