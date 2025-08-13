@@ -13,9 +13,12 @@ def add_behavior_container(nwb_file,csv_data_row,Rewarded):
     """
     Adds a 'behavior' container to the NWB file from the loaded .mat data.
 
-    :param nwb_file: existing NWB file
-    :param csv_data_row: a single row from the CSV file containing behavior data
-    :return: None
+   Args:
+       nwb_file (pynwb.file.NWBFile): Target NWB file to which behavior data is added.
+       csv_data_row (pandas.Series | Mapping): Row containing behavior data fields.
+       Rewarded (bool): if the mouse has a rewarded task.
+       
+    return: None
     """
     # --- Extract behavior data ---
     trial_onsets = list(map(float, csv_data_row["Trial_onset"].split(";")))

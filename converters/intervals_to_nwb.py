@@ -10,7 +10,20 @@ from pynwb.epoch import TimeIntervals
 
 def add_intervals_container(nwb_file,csv_data_row,Rewarded) -> None:
     """
-    Add detailed trial information to the NWBFile for a rewarded whisker detection task.
+    Populate `nwb_file.trials` from one CSV-like row by parsing trial-level fields
+    and adding one NWB trial per entry.
+
+    Args:
+        nwb_file (pynwb.file.NWBFile): Target NWB file to which trials are added.
+        csv_data_row (pandas.Series | Mapping): Row containing at least the keys:
+            "Trial_onset", "stim_indices", "stim_amp", "stim_onset",
+            "lickflag", "response_data", "lick_time".
+            Values are expected as semicolon-separated strings.
+        Rewarded (bool): If True, sets `reward_available=1` for all trials (else 0).
+
+    Returns:
+        None
+
     """
 
     # --- Extract trial data ---

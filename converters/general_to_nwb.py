@@ -11,23 +11,21 @@ import pandas as pd
 
 def add_general_container(nwb_file, regions):
     """
-    Crée devices, groupes d’électrodes et électrodes (LFP/EMG/EEG),
-    puis renvoie (electrode_table_region, channel_labels) dans l’ordre des colonnes de données.
+    Create general NWB structures (devices, electrode group) and register electrodes
+    for the provided LFP regions, then return an electrode table region aligned with
+    data columns.
 
-    Paramètres
-    ----------
-    nwb_file : pynwb.NWBFile
-    csv_data_row : pd.Series
-    regions : list[str]
-        LFP regions présentes (p.ex. issues de extract_lfp_signal)
+    Args:
+        nwb_file (pynwb.file.NWBFile): Target NWB file to populate.
+        regions (Sequence[str]): LFP region labels to register (subset of
+            ["PtA", "dCA1", "mPFC", "wM1", "wS1", "wS2", "antM1"]).
 
-    Retour
-    ------
-    electrode_table_region : pynwb.core.DynamicTableRegion
-    channel_labels : list[str]
-        Étiquettes de canaux dans l’ordre (ex : ["PtA","dCA1","...","EMG1","EMG2","EEG1","EEG2"])
+    Returns:
+        tuple[pynwb.core.DynamicTableRegion, list[str]]:
+            - electrode_table_region: DynamicTableRegion pointing to the added electrodes
+              (order matches the returned `channel_labels` and expected data columns).
+            - channel_labels: List of region labels actually added, in the same order.
     """
-
     # ##############################################################
     # 1. Add Device 
     # ##############################################################

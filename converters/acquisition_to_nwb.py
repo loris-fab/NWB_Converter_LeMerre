@@ -1,13 +1,9 @@
 from pynwb.ecephys import ElectricalSeries
-import h5py
 import numpy as np
 import warnings
 import os
-import pandas as pd
-from pynwb.behavior import BehavioralTimeSeries
-from pynwb.base import TimeSeries
-from pynwb.behavior import BehavioralEvents, BehavioralTimeSeries
-from pynwb import TimeSeries
+
+
 
 #####################################################
 # Functions that handle LFP acquisition in NWB files
@@ -15,27 +11,22 @@ from pynwb import TimeSeries
 
 def add_acquisitions_3series(nwb_file, lfp_array, electrode_region_all, channel_labels):
     """
-    Creates 3 separate ElectricalSeries (LFP, EMG, EEG) if the data/electrodes exist.
-    - rate = 2000.0
-    - unit = "V"
-    One for acquisition
-    The EMG and EEG in behavior time series
-    Parameters
-    ----------
-    nwb_file : pynwb.NWBFile
-        The NWB file object to which the acquisitions will be added.
-    lfp_array : np.ndarray
-        Array of shape (T, n_lfp) containing LFP data.
-    electrode_region_all : DynamicTableRegion
-        DynamicTableRegion containing all created channels.
-    channel_labels : list[str]
-        List of channel labels (returned by add_general_container).
-    emg : np.ndarray or None, optional
-        Array of shape (T,) or (T,2) containing EMG data, or None.
-    eeg : np.ndarray or None, optional
-        Array of shape (T,) or (T,2) containing EEG data, or None.
+    Add LFP data as a single ElectricalSeries acquisition to an NWB file.
+
+    This function builds an electrodes region from the provided mapping and writes
+    one ElectricalSeries named "ElectricalSeries_LFP" sampled at 2000 Hz.
+
+    Args:
+        nwb_file (pynwb.file.NWBFile): Target NWB file object (opened for writing).
+        lfp_array (np.ndarray): LFP data of shape (n_timepoints, n_channels), in Volts.
+        electrode_region_all: Electrode table region/selection containing global electrode indices.
+        channel_labels (Sequence[str]): Per-channel labels; must include a subset of
+            {"PtA","dCA1","mPFC","wM1","wS1","wS2","antM1"} matching the columns in `lfp_array`.
+
+    Returns:
+        None
     """
-    
+
     RATE = 2000.0
     UNIT = "V"
     LFP_LABELS = ["PtA", "dCA1", "mPFC", "wM1", "wS1", "wS2", "antM1"]
@@ -97,8 +88,6 @@ def extract_lfp_signal(csv_data_row):
     list
         Names of LFP regions (columns)
     """
-
-
     All_LFP = ["PtA", "dCA1", "mPFC", "wM1", "wS1", "wS2", "antM1"]
     LFPs = csv_data_row[All_LFP].dropna()
 
@@ -113,6 +102,18 @@ def extract_lfp_signal(csv_data_row):
 
 
 def remove_nwb_files(folder_path):
+    """
+    Delete all `.nwb` files in the given directory (non-recursive, best effort).
+
+    Args:
+        folder_path (str | pathlib.Path): Directory to scan.
+
+    Returns:
+        None
+
+    Side Effects:
+        Removes files on disk. Prints an error message if a file cannot be deleted.
+    """
     for filename in os.listdir(folder_path):
         if filename.endswith('.nwb'):
             file_path = os.path.join(folder_path, filename)
