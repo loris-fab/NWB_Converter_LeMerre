@@ -8,7 +8,7 @@ from pynwb.epoch import TimeIntervals
 # Functions for converting intervals to NWB format for AN sessions
 ###############################################################
 
-def add_intervals_container_Rewarded(nwb_file,csv_data_row) -> None:
+def add_intervals_container(nwb_file,csv_data_row,Rewarded) -> None:
     """
     Add detailed trial information to the NWBFile for a rewarded whisker detection task.
     """
@@ -24,6 +24,7 @@ def add_intervals_container_Rewarded(nwb_file,csv_data_row) -> None:
     response_window = 2
     n_trials = len(trial_onsets)
     lick_time = list(map(float, csv_data_row["lick_time"].split(";")))
+
     #print("trial_onsets:", trial_onsets[:3] ,len(trial_onsets))
     #print("stim_indices:", stim_indices[:3] ,len(stim_indices))
     #print("stim_amp:", stim_amp[:3] ,len(stim_amp))
@@ -75,7 +76,7 @@ def add_intervals_container_Rewarded(nwb_file,csv_data_row) -> None:
             whisker_stim_duration=str("1 (ms)"),
             no_stim= 1 if stim_indices[i] == 0 else 0,
             no_stim_time=catch_onset[i],
-            reward_available=1,
+            reward_available=1 if Rewarded else 0,
             response_window_start_time=float(trial_onsets[i]) + 0.05,
             response_window_stop_time=float(trial_onsets[i]) + 1,
             lick_flag=lick_flag[i],

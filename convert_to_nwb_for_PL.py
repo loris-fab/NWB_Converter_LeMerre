@@ -94,15 +94,11 @@ def convert_data_to_nwb_pl(output_folder,Folder_sessions_info, Folder_general_in
 
             # o ⏸️ Add intervall container
             importlib.reload(converters.intervals_to_nwb)
-            converters.intervals_to_nwb.add_intervals_container_Rewarded(nwb_file=nwb_file,csv_data_row=csv_data_row)
+            converters.intervals_to_nwb.add_intervals_container(nwb_file=nwb_file,csv_data_row=csv_data_row, Rewarded=Rewarded)
 
             # o ⚙️ Add behavior container
             importlib.reload(converters.behavior_to_nwb)
-            if Rewarded:
-                converters.behavior_to_nwb.add_behavior_container_Rewarded(nwb_file=nwb_file,csv_data_row=csv_data_row)
-            else:
-                #converters.behavior_to_nwb.add_behavior_container_NonRewarded(nwb_file=nwb_file,csv_data_row=csv_data_row)
-                pass
+            converters.behavior_to_nwb.add_behavior_container(nwb_file=nwb_file,csv_data_row=csv_data_row, Rewarded=Rewarded)
 
             # 🔎 Validating NWB file and saving...
             importlib.reload(converters.nwb_saving)

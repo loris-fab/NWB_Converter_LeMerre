@@ -198,7 +198,7 @@ def files_to_config(csv_data_row,output_folder="data"):
         session_description = "ephys Whisker Rewarded (WR+) mouse: the mouse was trained to lick within 1 s following a whisker stimulus (go trials) but not in the absence of the stimulus (no-go trials). Chronic multisite LFP recordings were performed using high-impedance tungsten electrodes (FHC, 10-12 MOhms, Shaft 0.075 mm, Catalog numb: UEWSCGSELNND)"
         stimulus_notes = "Whisker stimulation was applied to the C2 region to evoke sensory responses."
     elif behavior_type == "Neutral Exposition":
-        session_description = "ephys " + behavior_type + ": For the neutral exposure task, mice were trained to collect the reward by licking the water spout with an intertrial interval ranging from 6 to 12 s and after a no-lick period of 3-4 s, similar to the detection task. At random times the same 1 ms whisker stimulus was delivered to the C2 whisker with an inter stimulus interval ranging from 6 to 12 s and a probability of 50%. The whisker stimulus was not correlated to the delivery of the reward, therefore, no association between the stimulus and the delivery of the reward could be made. In this behavioral paradigm, mice were exposed to the whisker stimulus during 7-10 days."
+        session_description = "ephys Whisker non-Rewarded (WR-) mouse: the mouse was rewarded by licking randomly (Free-licking) and exposed to brief whisker stimuli that did not predict reward availability. Chronic multisite LFP recordings were performed using high-impedance tungsten electrodes (FHC, 10-12 MOhms, Shaft 0.075 mm, Catalog numb: UEWSCGSELNND)"
         stimulus_notes = "Whisker stimulation was applied to the C2 region to evoke sensory responses."
 
     else:
@@ -213,7 +213,7 @@ def files_to_config(csv_data_row,output_folder="data"):
             'institution': "Ecole Polytechnique Federale de Lausanne",
             'keywords': keywords,
             'lab' : "Laboratory of Sensory Processing",
-            'notes': 'Combination of chronic multisite LFP recordings from 5 cortical areas with nuchal EMG recording across multiple sessions as mice learned a whisker sensory detection task reported by licking.',
+            'notes': 'Combination of chronic multisite LFP recordings from 5 cortical areas with nuchal EMG recording across multiple sessions as mice learned a whisker sensory detection task reported by licking.' if behavior_type == "Detection Task" else "Combination of chronic multisite LFP recordings from 5 cortical areas with nuchal EMG recording across multiple sessions as mice were exposed to a whisker stimulus that did not predict reward availability.",
             'pharmacology': 'na',
             'protocol': 'na',
             'related_publications': related_publications,
@@ -411,6 +411,8 @@ def files_to_dataframe(PL, PLALL, dataframe):
             # Stim_times
             stim_onset= np.asarray(pli["Performance"]["data"].T[3])
    
+            #reward_onset  
+            reward_onset = np.asarray(pli["Valve_times"]["data"]/1000)
 
             # trial_onset
             Trial_onset = np.asarray(pli["Performance"]["data"].T[0])
@@ -517,6 +519,7 @@ def files_to_dataframe(PL, PLALL, dataframe):
                 "stim_amp": ';'.join(map(str, stim_amp)),
                 "lickflag": ';'.join(map(str, lickflag)),
                 "lick_time": ';'.join(map(str, lick_time)),
+                "reward_onset": ';'.join(map(str, reward_onset)),
                 "PiezoLickSignal": ';'.join(map(str, np.asarray(pli["lick"]["data"]))),
                 "response_data": ';'.join(map(str, response_data)) ,
                 "EMG": ';'.join(map(str, EMG)) if not (isinstance(EMG, float) and np.isnan(EMG)) else np.nan,

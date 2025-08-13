@@ -9,7 +9,7 @@ import pandas as pd
 # Functions for adding behavior container to NWB file
 ################################################################
 
-def add_behavior_container_Rewarded(nwb_file,csv_data_row):
+def add_behavior_container(nwb_file,csv_data_row,Rewarded):
     """
     Adds a 'behavior' container to the NWB file from the loaded .mat data.
 
@@ -24,7 +24,7 @@ def add_behavior_container_Rewarded(nwb_file,csv_data_row):
     response_data_type = np.asarray(list(map(float, csv_data_row["response_data"].split(";"))))
     lick_time = np.asarray(list(map(float, csv_data_row["lick_time"].split(";"))))
     PiezoLickSignal = np.asarray(list(map(float, csv_data_row["PiezoLickSignal"].split(";"))))
-
+    reward_onset = np.asarray(list(map(float, csv_data_row["reward_onset"].split(";"))))
 
     # 1. Created behavior processing module
     bhv_module = nwb_file.create_processing_module('behavior', 'contains behavioral processed data')
@@ -141,6 +141,17 @@ def add_behavior_container_Rewarded(nwb_file,csv_data_row):
     )
     behavior_events.add_timeseries(ts_false_alarm)
 
+    if Rewarded:
+        # --- reward_onset ---
+        ts_reward_onset = TimeSeries(
+            name='reward_onset',
+            data=np.ones_like(reward_onset),
+            timestamps=reward_onset,
+            unit='n.a.',
+            description = "Timestamps for reward-times",
+            comments = "time of each reward delivery event.",
+        )
+        behavior_events.add_timeseries(ts_reward_onset)
     #########################################################
     ### Add continuous traces  ###
     #########################################################
@@ -183,99 +194,3 @@ def add_behavior_container_Rewarded(nwb_file,csv_data_row):
 
     return None
 
-
-def add_behavior_container_NonRewarded(nwb_file,csv_data_row):
-    """
-    Adds a 'behavior' container to the NWB file from the loaded .mat data.
-
-    :param nwb_file: existing NWB file
-    :param csv_data_row: a single row from the CSV file containing behavior data
-    :return: None
-    """
-
-    # 1. Created behavior processing module
-    bhv_module = nwb_file.create_processing_module('behavior', 'contains behavioral processed data')
-
-    ###############################################
-    ### Add behavioral events                    ###
-    ###############################################
-
-
-    behavior_events = BehavioralEvents(name='BehavioralEvents')
-    bhv_module.add_data_interface(behavior_events)
-
-    
-    # --- TRIAL ONSETS ---
-    trial_onsets = list(map(float, csv_data_row["Trial_onset"].split(";")))
-    ts_trial = TimeSeries(
-        name='TrialOnsets',
-        data=np.ones_like(trial_onsets),
-        unit='n.a.',
-        timestamps=trial_onsets,
-        description='Timestamps marking the onset of each trial.',
-        comments='Encoded as 1 at each trial onset timestamp & the trial duration is 1 seconds.',
-        rate = None,
-    )
-    behavior_events.add_timeseries(ts_trial)
-    
-
-    # --- STIMULATION ---    
-    stim_tms = list(map(float, csv_data_row["stim_onset"].split(";")))  
-
-    ts_stim_flags = TimeSeries(
-        name='StimFlags',
-        data=np.ones_like(stim_tms),
-        timestamps=stim_tms,
-        unit='n.a.',
-        description='Timestamps marking the whisker stimulation for each trial',
-        comments='Whisker stimulation :1 = deflection of the C2 whisker (stim trial).',
-        rate = None,
-    )
-    behavior_events.add_timeseries(ts_stim_flags)
-    
-    
-    # --- Valve_onset ---
-    reaction_times = list(map(float, csv_data_row["Responses_times"].split(";"))) 
-
-    ts_reaction = TimeSeries(
-        name='ValveOnsets',
-        data=np.ones_like(reaction_times),
-        timestamps=reaction_times,
-        unit='n.a.',
-        description = "Timestamps marking the onset of the valve activation.",
-        comments = "Encoded as 1 at each valve activation timestamp. The whisker stimulus was not correlated to the delivery of the reward, therefore, no association between the stimulus and the delivery of the reward could be made.",
-    )
-    behavior_events.add_timeseries(ts_reaction)
-
-    #########################################################
-    ### Add continuous traces  ###
-    #########################################################
-    bts = bhv_module.data_interfaces.get('BehavioralTimeSeries')
-    if bts is None:
-        bts = BehavioralTimeSeries(name='BehavioralTimeSeries')
-        bhv_module.add(bts)
-
-    if pd.notna(csv_data_row["EMG"]):
-        EMG = list(map(float, csv_data_row["EMG"].split(";")))
-    else:
-        EMG = None
-
-    # ---------- EMG ----------
-    RATE = 2000.0
-    UNIT = "V"
-
-    if EMG is not None :
-        es_emg = TimeSeries(
-            name="ElectricalSeries_EMG",
-            data=EMG,
-            starting_time=0.0,
-            rate=RATE,
-            unit=UNIT,
-            description="EMG signal over time (V, Sampling rate = 2000 Hz)",
-            comments = "Electromyogram (EMG) recorded differentially from 2 custom-built gold-plated electrodes inserted in the nuchal muscles on both sides of the neck, resulting in a single EMG signal bandpass filtered 10-20 000 Hz."
-        )
-        bts.add_timeseries(es_emg)
-
-
-
-    return None
