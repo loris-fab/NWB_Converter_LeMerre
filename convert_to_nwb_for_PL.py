@@ -92,28 +92,17 @@ def convert_data_to_nwb_pl(output_folder,Folder_sessions_info, Folder_general_in
             # o 📶 Add acquisition container
             converters.acquisition_to_nwb.add_acquisitions_3series(nwb_file=nwb_file, lfp_array=signal_LFP, electrode_region_all=electrode_table_region, channel_labels=labels)  #same between Rewarded and NonRewarded sessions
 
-
-
             # o ⏸️ Add intervall container
             importlib.reload(converters.intervals_to_nwb)
-            if Rewarded:
-                converters.intervals_to_nwb.add_intervals_container_Rewarded(nwb_file=nwb_file,csv_data_row=csv_data_row)
-                pass
+            converters.intervals_to_nwb.add_intervals_container_Rewarded(nwb_file=nwb_file,csv_data_row=csv_data_row)
 
-            # o ⚙️ Add processing container
+            # o ⚙️ Add behavior container
             importlib.reload(converters.behavior_to_nwb)
             if Rewarded:
-                # Behavior data
-                ##trial_onsets, stim_data , response_data_type, window_trial =converters.behavior_to_nwb.add_behavior_container_Rewarded(nwb_file=nwb_file,csv_data_row=csv_data_row)
-                #info_trials = [trial_onsets, stim_data , response_data_type, window_trial]
-                pass
+                converters.behavior_to_nwb.add_behavior_container_Rewarded(nwb_file=nwb_file,csv_data_row=csv_data_row)
             else:
-                # Behavior data
                 #converters.behavior_to_nwb.add_behavior_container_NonRewarded(nwb_file=nwb_file,csv_data_row=csv_data_row)
                 pass
-            # No ephys data for AN sessions
-
-            
 
             # 🔎 Validating NWB file and saving...
             importlib.reload(converters.nwb_saving)
@@ -136,7 +125,7 @@ def convert_data_to_nwb_pl(output_folder,Folder_sessions_info, Folder_general_in
                 os.remove(output_path)
         """
         except Exception as e:
-            failures.append((csv_data_row["Mouse Name"], str(e)))
+            failures.append((csv_data_row["Session"], str(e)))
             continue
         finally:
             bar.update(1)

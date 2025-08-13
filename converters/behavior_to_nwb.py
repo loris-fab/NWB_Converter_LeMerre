@@ -17,7 +17,13 @@ def add_behavior_container_Rewarded(nwb_file,csv_data_row):
     :param csv_data_row: a single row from the CSV file containing behavior data
     :return: None
     """
-    response_window = 2
+    # --- Extract behavior data ---
+    trial_onsets = list(map(float, csv_data_row["Trial_onset"].split(";")))
+    stim_amp = np.asarray(list(map(float, csv_data_row["stim_amp"].split(";"))))
+    stim_onset = np.asarray(list(map(float, csv_data_row["stim_onset"].split(";"))))
+    response_data_type = np.asarray(list(map(float, csv_data_row["response_data"].split(";"))))
+    lick_time = np.asarray(list(map(float, csv_data_row["lick_time"].split(";"))))
+    PiezoLickSignal = np.asarray(list(map(float, csv_data_row["PiezoLickSignal"].split(";"))))
 
 
     # 1. Created behavior processing module
@@ -33,7 +39,6 @@ def add_behavior_container_Rewarded(nwb_file,csv_data_row):
 
 
     # --- TRIAL ONSETS ---
-    trial_onsets = list(map(float, csv_data_row["Trial_onset"].split(";")))
     ts_trial = TimeSeries(
         name='TrialOnsets',
         data=np.ones_like(trial_onsets),
@@ -45,79 +50,96 @@ def add_behavior_container_Rewarded(nwb_file,csv_data_row):
     )
     behavior_events.add_timeseries(ts_trial)
 
+    
+    # --- ReactionTimes  ---
+    lick_time1 = lick_time[lick_time > 0]
+    ts_reaction = TimeSeries(
+        name='ReactionTimes',
+        data=np.ones_like(lick_time1),
+        unit='n.a.',
+        timestamps=lick_time1,
+        description='Timestamps of response-time defined as lick-onset occurring after trial onset.',
+        comments='reaction time from PiezoLickSignal',
+        rate = None,
+    )
+    behavior_events.add_timeseries(ts_reaction)
+
 
     # --- STIMULATION FLAGS (stim et flag) ---    
-    stim_tms = list(map(float, csv_data_row["stim_onset"].split(";")))  
-    stim_data = list()
-    for stim in trial_onsets:
-        if stim in stim_tms:
-            stim_data.append(1)
-        elif stim not in stim_tms:
-            stim_data.append(0)
 
     ts_stim_flags = TimeSeries(
         name='StimFlags',
-        data=stim_data,
-        timestamps=trial_onsets,
+        data=stim_amp[stim_amp > 0],
+        timestamps=stim_onset[stim_onset > 0],
         unit='n.a.',
-        description='Timestamps marking the whisker stimulation for each trial',
-        comments='Whisker stimulation : 0 = no stimulus (Catch trial), 1 = deflection of the C2 whisker (stim trial).',
+        description='Timestamps marking the amplitude of whisker stimulation for each trial',
+        comments='Whisker stimulation amplitudes are encoded as integers: 0 = no stimulus (Catch trial), 1 = deflection of the C2 whisker.',
         rate = None,
     )
     behavior_events.add_timeseries(ts_stim_flags)
     
-    
-    # --- Responses_times ---
-    reaction_times = np.array(list(map(float, csv_data_row["Responses_times"].split(";"))))
-    Responses_tms_per_trial = []
-    Responses_tms_per_trial_tms = []
-    response_data = []
-    for i, t0 in enumerate(trial_onsets):
-        t1 = t0 + response_window
-        indices = np.where((reaction_times >= t0) & (reaction_times < t1))[0]
-        if len(indices) > 0:
-            Responses_tms_per_trial.append(1)
-            Responses_tms_per_trial_tms.append(reaction_times[indices[0]])
-            if stim_data[i] == 1:
-                response_data.append(1)
-            else:
-                response_data.append(3)
-        else:
-            Responses_tms_per_trial.append(0)
-            Responses_tms_per_trial_tms.append(t0) # Change to np.nan if you want to indicate no response
-            if stim_data[i] == 1:
-                response_data.append(0)
-            else:
-                response_data.append(2)
-    if (len(Responses_tms_per_trial) != len(Responses_tms_per_trial_tms)) and  (len(Responses_tms_per_trial) != len(trial_onsets)):
-        raise ValueError("Mismatch between number of trials and response timestamps.")
-
-    ts_reaction = TimeSeries(
-        name='ReactionTimes',
-        data=np.array(Responses_tms_per_trial),
-        timestamps=np.array(Responses_tms_per_trial_tms),
-        unit='n.a.',
-        description = "Timestamps of reaction events defined as a lick occurring after trial onset.",
-        comments = "Encoded as 1 at time of reaction, 0 if no reaction occurred with the corresponding trial timestamp.",
-    )
-    behavior_events.add_timeseries(ts_reaction)
-
 
     # ---- "ResponseType" ------
 
     response_labels_ts = TimeSeries(
         name='ResponseType',
-        data=response_data,
+        data=response_data_type,
         unit='code',
-        timestamps=np.array(Responses_tms_per_trial_tms),
+        timestamps=trial_onsets,
         description = "Response type for each trial",
-        comments='Integer-encoded trial responses: 0 = MISS, 1 = HIT, 2 = CR (Correct Rejection). We havent defined FA (False Alarm) in this task, but it could be added as 3 if needed.',
+        comments='trial responses: 0 = MISS, 1 = HIT, 2 = CR (Correct Rejection), 3 = FA (False Alarm), 4 = Unlabeled (no assigned response).',
 
     )
 
     behavior_events.add_timeseries(response_labels_ts)
 
+    # ---- "Whisker_hit_trial" ------
+    ts_whisker_hit = TimeSeries(
+        name='whisker_hit_trial',
+        data=(response_data_type == 1).astype(int),  # Convert to binary (1 for hit, 0 for no hit)
+        unit='n.a.',
+        timestamps=trial_onsets,
+        description='Timestamps for whisker_hit_trial',
+        comments='time of each whisker_hit_trial event.',
+        rate=None,
+    )
+    behavior_events.add_timeseries(ts_whisker_hit)
 
+    # --- whisker_miss_trial ----
+    ts_whisker_miss = TimeSeries(
+        name='whisker_miss_trial',
+        data=(response_data_type == 0).astype(int),  # Convert to binary (1 for miss, 0 for no miss)
+        unit='n.a.',
+        timestamps=trial_onsets,
+        description='Timestamps for whisker_miss_trial',
+        comments='time of each whisker_miss_trial event.',
+        rate=None,
+    )
+    behavior_events.add_timeseries(ts_whisker_miss)
+
+    # ---- correct_rejection_trial ----
+    ts_correct_rejection = TimeSeries(
+        name='correct_rejection_trial',
+        data=(response_data_type == 2).astype(int),  # Convert to binary (1 for correct rejection, 0 for no correct rejection)
+        unit='n.a.',
+        timestamps=trial_onsets,
+        description='Timestamps for correct_rejection_trial',
+        comments='time of each correct_rejection_trial event.',
+        rate=None,
+    )
+    behavior_events.add_timeseries(ts_correct_rejection)
+
+    # ---- false_alarm_trial ----
+    ts_false_alarm = TimeSeries(
+        name='false_alarm_trial',
+        data=(response_data_type == 3).astype(int),  # Convert to binary (1 for false alarm, 0 for no false alarm)
+        unit='n.a.',
+        timestamps=trial_onsets,
+        description='Timestamps for false_alarm_trial',
+        comments='time of each false_alarm_trial event.',
+        rate=None,
+    )
+    behavior_events.add_timeseries(ts_false_alarm)
 
     #########################################################
     ### Add continuous traces  ###
@@ -148,18 +170,18 @@ def add_behavior_container_Rewarded(nwb_file,csv_data_row):
         )
         bts.add_timeseries(es_emg)
 
-    trial_onsets = list(map(float, csv_data_row["Trial_onset"].split(";")))
-    stim_tms = list(map(float, csv_data_row["stim_onset"].split(";")))  
-    stim_data = list()
-    for stim in trial_onsets:
-        if stim in stim_tms:
-            stim_data.append(1)
-        elif stim not in stim_tms:
-            stim_data.append(0)
-    
+    es_PiezoLickSignal = TimeSeries(
+    name="ElectricalSeries_PiezoLickSignal",
+    data=PiezoLickSignal,
+    starting_time=0.0,
+    rate=RATE,
+    unit=UNIT,
+    description="Lick signal over time (V, Sampling rate = 2000 Hz)",
+    comments="PiezoLickSignal is the continuous electrical signal recorded from the piezo film attached to the water spout to detect when the mouse contacts the water spout with its tongue."
+    )
+    bts.add_timeseries(es_PiezoLickSignal)
 
-    return trial_onsets, stim_data , response_data, response_window
-
+    return None
 
 
 def add_behavior_container_NonRewarded(nwb_file,csv_data_row):
@@ -249,9 +271,11 @@ def add_behavior_container_NonRewarded(nwb_file,csv_data_row):
             starting_time=0.0,
             rate=RATE,
             unit=UNIT,
-            description="EMG recorded differentially from 2 electrodes, resulting in a single EMG signal",
-            comments = "2000 Hz, in V."
+            description="EMG signal over time (V, Sampling rate = 2000 Hz)",
+            comments = "Electromyogram (EMG) recorded differentially from 2 custom-built gold-plated electrodes inserted in the nuchal muscles on both sides of the neck, resulting in a single EMG signal bandpass filtered 10-20 000 Hz."
         )
         bts.add_timeseries(es_emg)
+
+
 
     return None

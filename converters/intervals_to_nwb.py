@@ -15,28 +15,34 @@ def add_intervals_container_Rewarded(nwb_file,csv_data_row) -> None:
 
     # --- Extract trial data ---
     trial_onsets = list(map(float, csv_data_row["Trial_onset"].split(";")))
-    stim_indices = list(map(bool, csv_data_row["stim_indices"].split(";")))
+    stim_indices = np.asarray(list(map(float, csv_data_row["stim_indices"].split(";"))))
     stim_amp = list(map(float, csv_data_row["stim_amp"].split(";")))
     stim_onset = list(map(float, csv_data_row["stim_onset"].split(";")))
-    catch_onset = list(map(float, csv_data_row["catch_onset"].split(";")))
+    catch_onset = np.where(stim_indices == 0, trial_onsets, np.nan)
     lick_flag = list(map(int, csv_data_row["lickflag"].split(";")))
     response_data_type = list(map(float, csv_data_row["response_data"].split(";")))
     response_window = 2
     n_trials = len(trial_onsets)
     lick_time = list(map(float, csv_data_row["lick_time"].split(";")))
-
+    #print("trial_onsets:", trial_onsets[:3] ,len(trial_onsets))
+    #print("stim_indices:", stim_indices[:3] ,len(stim_indices))
+    #print("stim_amp:", stim_amp[:3] ,len(stim_amp))
+    #print("stim_onset:", stim_onset[:3] ,len(stim_onset))
+    #print("catch_onset:", catch_onset[:3] ,len(catch_onset))
+    #print("lick_flag:", lick_flag[:3] ,len(lick_flag))
+    #print("response_data_type:", response_data_type[:3] ,len(response_data_type))
+    #print("lick_time:", lick_time[:3] ,len(lick_time))
 
     # --- Define new trial columns ---
     new_columns = {
         'trial_type': 'stimulus Whisker vs no stimulus trial',
         'whisker_stim': '1 if whisker stimulus delivered, else 0',
-        'response_window_start_time': 'Start of response window',
         'perf': '0= whisker miss; 1= whisker hit ; 2= correct rejection ; 3= false alarm',
         "whisker_stim_amplitude": "Amplitude of the whisker stimulation between 0 and 5",
         "whisker_stim_duration": "Duration of the whisker stimulation (ms)",
-        #"whisker_stim_time": "trial start time for whisker_stim=1 else NaN",
+        "whisker_stim_time": "trial start time for whisker_stim=1 else NaN",
         "no_stim" : "1 if no stimulus delivered, else 0",
-        #"no_stim_time": "trial start time for no_stim=1 (catch trial) else NaN",
+        "no_stim_time": "trial start time for no_stim=1 (catch trial) else NaN",
         "reward_available": "1 if reward is available, else 0",
         "response_window_start_time": "Start of response window",
         "response_window_stop_time": "Stop of response window",
@@ -62,13 +68,13 @@ def add_intervals_container_Rewarded(nwb_file,csv_data_row) -> None:
             start_time=float(trial_onsets[i]),
             stop_time=float(trial_onsets[i]) + response_window,
             trial_type='whisker_trial' if stim_indices[i] else 'no_whisker_trial',
-            whisker_stim=int(stim_indices[i]),
+            whisker_stim=stim_indices[i],
             perf=response_data_type[i],
-            #whisker_stim_time=stim_onset[i],
+            whisker_stim_time=stim_onset[i],
             whisker_stim_amplitude=stim_amp[i],
             whisker_stim_duration=str("1 (ms)"),
-            no_stim=int(not stim_indices[i]),
-            #no_stim_time=catch_onset[i],
+            no_stim= 1 if stim_indices[i] == 0 else 0,
+            no_stim_time=catch_onset[i],
             reward_available=1,
             response_window_start_time=float(trial_onsets[i]) + 0.05,
             response_window_stop_time=float(trial_onsets[i]) + 1,

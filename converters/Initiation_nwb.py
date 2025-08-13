@@ -141,7 +141,7 @@ def files_to_config(csv_data_row,output_folder="data"):
     #'camera_start_delay': ?,
     #'artifact_window': ?,
     "session type":"ephys session",
-    'licence': str(subject_info.get("licence", "")).strip() + " (All procedures were approved by the Swiss Federal Veterinary Office)",
+    'licence': str(subject_info.get("licence", "")).strip(),
     #'ear tag': str(subject_info.get("Ear tag", "")).strip(),
     "Software and Algorithms": "Labview, Klusta, MATLAB R2015b",
     'Ambient noise': '80 dB',
@@ -611,22 +611,19 @@ def files_to_dataframe(PL, PLALL, dataframe):
 
             # Stim_times
             stim_onset= np.asarray(pli["Performance"]["data"].T[3])
+   
 
             # trial_onset
             Trial_onset = np.asarray(pli["Performance"]["data"].T[0])
 
             #stim_indice
-            stim_indices = np.asarray(pli["Performance"]["data"].T[1]).flatten().astype(bool)
+            stim_indices = np.asarray(pli["Performance"]["data"].T[1]).flatten()
             #stim_amp
             stim_amp = np.asarray(pli["Performance"]["data"].T[2]).flatten()
 
             # Catch_times
-            stim_onset= np.asarray(pli["Stim_times"]["data"])/1000
-            catch_onset = np.asarray(pli["Catch_times"]["data"])/1000
-            all_onsets = np.concatenate([stim_onset, catch_onset])
-            all_onsets_sorted = np.sort(all_onsets)
-            catch_onset = [el for el in catch_onset if el in all_onsets_sorted]
-
+            catch_onset = [np.nan if el in Trial_onset else el for el in stim_onset]
+            
             #Response_data
             response_data = np.asarray(pli["Performance"]["data"].T[8]).flatten()
 
@@ -721,7 +718,7 @@ def files_to_dataframe(PL, PLALL, dataframe):
                 "stim_amp": ';'.join(map(str, stim_amp)),
                 "lickflag": ';'.join(map(str, lickflag)),
                 "lick_time": ';'.join(map(str, lick_time)),
-                "Responses_times": ';'.join(map(str, np.asarray(pli["Valve_times"]["data"])/1000)),
+                "PiezoLickSignal": ';'.join(map(str, np.asarray(pli["lick"]["data"]))),
                 "response_data": ';'.join(map(str, response_data)) ,
                 "EMG": ';'.join(map(str, EMG)) if not (isinstance(EMG, float) and np.isnan(EMG)) else np.nan,
                 "PtA": ';'.join(map(str, PtA)) if not (isinstance(PtA, float) and np.isnan(PtA)) else np.nan,
@@ -736,5 +733,5 @@ def files_to_dataframe(PL, PLALL, dataframe):
 
             # Append the new row to the DataFrame
             csv_data = pd.concat([csv_data, pd.DataFrame([new_row])], ignore_index=True)
-            print(f"Processing session file: {file_name}")
+            #print(f"Processing session file: {file_name}")
     return csv_data
