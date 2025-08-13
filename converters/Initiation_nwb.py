@@ -130,6 +130,7 @@ def files_to_config(csv_data_row,output_folder="data"):
     #'aud_reward': ?,
     'reward_proba': 1 if str(subject_info.get("Behavior Type", "Unknown").strip()) == "Detection Task" else 0,
     'wh_stim_amps': '5',
+    'behavioral_type': "Whisker rewarded (WR+)" if str(subject_info.get("Behavior Type", "Unknown").strip()) == "Detection Task" else "Whisker non-rewarded (WR-)",
     #'lick_threshold': ?,
     #'no_stim_weight': ?,
     #'wh_stim_weight': ?,
