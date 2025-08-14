@@ -269,7 +269,7 @@ def files_to_config(csv_data_row,output_folder="data"):
 # Function that creates the csv file for the NWB conversion
 #############################################################################
 
-def remove_rows_by_mouse_name(df, mouse_name):
+def remove_rows_of_df(df, info_to_remove, col):
     """
     Return a copy of the DataFrame without rows matching a given mouse name.
 
@@ -280,7 +280,7 @@ def remove_rows_by_mouse_name(df, mouse_name):
     Returns:
         pandas.DataFrame: Filtered DataFrame.
     """
-    return df[df["Mouse Name"] != mouse_name]
+    return df[df[col] != info_to_remove]
 
 def remove_nwb_files(folder_path):
     """
@@ -378,7 +378,7 @@ def find_pl_pairs(
 
 
 
-def files_to_dataframe(PL, PLALL, dataframe):
+def files_to_dataframe(PL, PLALL, dataframe, failures):
     """
     Append session rows to a DataFrame from PL general info and per-session .mat files.
 
@@ -430,6 +430,7 @@ def files_to_dataframe(PL, PLALL, dataframe):
             raise ValueError(f"No number found in a .mat file: {file_name}")
         return -1
     i = -1
+    absent_mice = np.array([], dtype=str)
     try: 
         for  file_name in sorted(os.listdir(PLALL), key=extract_number):
             file_path = os.path.join(PLALL, file_name)
@@ -610,8 +611,12 @@ def files_to_dataframe(PL, PLALL, dataframe):
 
                 # Append the new row to the DataFrame
                 csv_data = pd.concat([csv_data, pd.DataFrame([new_row])], ignore_index=True)
-                print(f"Processing session file: {file_name}")
+                #print(f"Processing session file: {file_name}")
     except Exception as e:
-        print(f"Error processing session file {file_name}: {e}")
-        
-    return csv_data
+        absent_mice.append(mouse_name)
+        failures.append((session, str(e)))
+
+    if len(np.unique(absent_mice)) > 0:
+        csv_data = remove_rows_of_df(csv_data, np.unique(absent_mice), "Mouse Name")
+
+    return csv_data, failures

@@ -25,37 +25,32 @@ import gc
 
 def convert_data_to_nwb_pl(output_folder,Folder_sessions_info, Folder_general_info = "/Volumes/Petersen-Lab/publications/2018/2018_LeMerre_Neuron/2018_LeMerre_Neuron_data/processed_data",mouses_name=None, ):
 
+    if mouses_name == None: 
+        mouses_name = ["PL200", "PL201", "PL202", "PL203", "PL204", "PL205", "PL206", "PL207", "PL208", "PL209", "PL210", "PL211", "PL212", "PL213","PL214", "PL215", "PL216", "PL217", "PL218", "PL219", "PL220","PL221", "PL222", "PL223", "PL224", "PL225"]
 
     # Find pairs of processed and raw data files 
     importlib.reload(converters.Initiation_nwb)
     pairs = converters.Initiation_nwb.find_pl_pairs(Folder_general_info, Folder_sessions_info, mouse_names=mouses_name)
-    #print("pairs:", pairs)
-    csv_data = pd.DataFrame(columns=['Mouse Name'])
-    csv_data.columns = csv_data.columns.str.strip() 
+
 
     print("**************************************************************************")
     print("-_-_-_-_-_-_-_-_-_-_-_-_-_-_- NWB conversion _-_-_-_-_-_-_-_-_-_-_-_-_-_-_")
     # Loop through each pair of processed and raw data files
-    for pair in tqdm(pairs, desc="Loading data ..."):
-        PL, PLLA = pair
-        csv_data = converters.Initiation_nwb.files_to_dataframe(PL, PLLA, csv_data)
+    csv_data = pd.DataFrame(columns=['Mouse Name'])
+    failures = []  # (mouse_name, err_msg)
+
+    pbar = tqdm(pairs, unit="file")
+    for PL, PLLA in pbar:
+        pbar.set_description(f"Loading data {Path(PL).name} ...")
+        csv_data, failures= converters.Initiation_nwb.files_to_dataframe(PL, PLLA, csv_data,  failures)
     gc.collect()
-
-
-    if mouses_name is None:
-        mouses_name = csv_data["Mouse Name"].unique().tolist()
-    else:
-        missing = [name for name in mouses_name if name not in csv_data["Mouse Name"].unique()]
-        if missing:
-            raise ValueError(f"Mouse name(s) not found in csv file: {missing}")
-
-    
     csv_data = csv_data[csv_data["Mouse Name"].isin(mouses_name)]
-    all_sessions = csv_data["Session"]
-    
+
+    # Check for missing mouse names
+    missing = [name for name in mouses_name if name not in csv_data["Mouse Name"].unique().tolist()]
+
 
     print("Converting data to NWB format for mouse:", list(np.unique(csv_data["Mouse Name"])))
-    failures = []  # (mouse_name, err_msg)
     bar = tqdm(total=len(csv_data), desc="Processing ")
     for _, csv_data_row in csv_data.iterrows():
         bar.set_postfix_str(str(csv_data_row["Mouse Name"])) 
@@ -118,7 +113,7 @@ def convert_data_to_nwb_pl(output_folder,Folder_sessions_info, Folder_general_in
             bar.update(1)
         gc.collect()
     if len(failures) > 0:
-            print(f"⚠️ Conversion completed with errors for {len(failures)} files")
+            print(f"⚠️ Conversion completed except for : {missing} because of the following errors:")
             for i, (mouse_name, error) in enumerate(failures):
                 print(f"    - {mouse_name}: {error}")
 
