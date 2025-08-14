@@ -613,4 +613,4 @@ def files_to_dataframe(PL, PLALL, dataframe):
             #print(f"Processing session file: {file_name}")
 
 
-    return csv_data, session
+    return csv_data
