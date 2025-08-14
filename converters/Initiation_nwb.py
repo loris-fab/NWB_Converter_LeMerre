@@ -613,7 +613,7 @@ def files_to_dataframe(PL, PLALL, dataframe, failures):
                 csv_data = pd.concat([csv_data, pd.DataFrame([new_row])], ignore_index=True)
                 #print(f"Processing session file: {file_name}")
     except Exception as e:
-        absent_mice.append(mouse_name)
+        absent_mice = np.append(absent_mice, mouse_name)
         failures.append((session, str(e)))
 
     if len(np.unique(absent_mice)) > 0:
