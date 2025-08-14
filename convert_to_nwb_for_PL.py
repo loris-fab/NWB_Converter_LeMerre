@@ -40,10 +40,17 @@ def convert_data_to_nwb_pl(output_folder,Folder_sessions_info, Folder_general_in
     failures = []  # (mouse_name, err_msg)
 
     pbar = tqdm(pairs, unit="file")
+    
     for PL, PLLA in pbar:
-        pbar.set_description(f"Loading data {Path(PL).name} ...")
-        csv_data, failures= converters.Initiation_nwb.files_to_dataframe(PL, PLLA, csv_data,  failures)
-    gc.collect()
+        try:
+            pbar.set_description(f"Loading data {Path(PL).name} ...")
+            csv_data= converters.Initiation_nwb.files_to_dataframe(PL, PLLA, csv_data)
+            gc.collect()
+        except Exception as e:
+            failures.append((Path(PL).name, str(e)))
+            csv_data = converters.Initiation_nwb.remove_rows_of_df(csv_data, np.unique(Path(PL).name), "Mouse Name")
+
+
     csv_data = csv_data[csv_data["Mouse Name"].isin(mouses_name)]
 
     # Check for missing mouse names
