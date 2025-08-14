@@ -48,7 +48,9 @@ def convert_data_to_nwb_pl(output_folder,Folder_sessions_info, Folder_general_in
             gc.collect()
         except Exception as e:
             failures.append((Path(PL).name, str(e)))
-            csv_data = converters.Initiation_nwb.remove_rows_of_df(csv_data, Path(PL).name, "Mouse Name")
+
+    for mouse_name, err_msg in failures:
+        csv_data = converters.Initiation_nwb.remove_rows_of_df(csv_data, mouse_name, "Mouse Name")
 
 
     csv_data = csv_data[csv_data["Mouse Name"].isin(mouses_name)]
