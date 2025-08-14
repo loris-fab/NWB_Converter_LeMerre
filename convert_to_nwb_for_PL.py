@@ -44,13 +44,14 @@ def convert_data_to_nwb_pl(output_folder,Folder_sessions_info, Folder_general_in
     for PL, PLLA in pbar:
         try:
             pbar.set_description(f"Loading data {Path(PL).name} ...")
-            csv_data= converters.Initiation_nwb.files_to_dataframe(PL, PLLA, csv_data)
+            csv_data, session= converters.Initiation_nwb.files_to_dataframe(PL, PLLA, csv_data)
             gc.collect()
         except Exception as e:
-            failures.append((Path(PL).name, str(e)))
+            failures.append((session, str(e)))
 
-    for mouse_name, err_msg in failures:
-        csv_data = converters.Initiation_nwb.remove_rows_of_df(csv_data, mouse_name, "Mouse Name")
+    for session, err_msg in failures:
+        name_belong_to_session = str(csv_data[csv_data["Session"] == session]["Mouse Name"].unique())
+        csv_data = converters.Initiation_nwb.remove_rows_of_df(csv_data, name_belong_to_session, "Mouse Name")
 
 
     csv_data = csv_data[csv_data["Mouse Name"].isin(mouses_name)]
