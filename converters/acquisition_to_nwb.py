@@ -33,7 +33,6 @@ def add_acquisitions_3series(nwb_file, lfp_array, electrode_region_all, channel_
 
 
     def _region_indices(dtr):
-        # indices globaux des électrodes
         try:
             return list(dtr.data[:])
         except Exception:
@@ -44,7 +43,6 @@ def add_acquisitions_3series(nwb_file, lfp_array, electrode_region_all, channel_
                 print("third")
                 return list(dtr.region)
 
-    # mapping label -> index global d'électrode
     idx_all = _region_indices(electrode_region_all)
     label_to_idx = dict(zip(channel_labels, idx_all))
 

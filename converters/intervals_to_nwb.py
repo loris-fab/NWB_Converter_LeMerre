@@ -38,15 +38,6 @@ def add_intervals_container(nwb_file,csv_data_row,Rewarded) -> None:
     n_trials = len(trial_onsets)
     lick_time = list(map(float, csv_data_row["lick_time"].split(";")))
 
-    #print("trial_onsets:", trial_onsets[:3] ,len(trial_onsets))
-    #print("stim_indices:", stim_indices[:3] ,len(stim_indices))
-    #print("stim_amp:", stim_amp[:3] ,len(stim_amp))
-    #print("stim_onset:", stim_onset[:3] ,len(stim_onset))
-    #print("catch_onset:", catch_onset[:3] ,len(catch_onset))
-    #print("lick_flag:", lick_flag[:3] ,len(lick_flag))
-    #print("response_data_type:", response_data_type[:3] ,len(response_data_type))
-    #print("lick_time:", lick_time[:3] ,len(lick_time))
-
     # --- Define new trial columns ---
     new_columns = {
         'trial_type': 'stimulus Whisker vs no stimulus trial',

@@ -100,7 +100,7 @@ def add_behavior_container(nwb_file,csv_data_row,Rewarded):
     # ---- "Whisker_hit_trial" ------
     ts_whisker_hit = TimeSeries(
         name='whisker_hit_trial',
-        data=(response_data_type == 1).astype(int),  # Convert to binary (1 for hit, 0 for no hit)
+        data=(response_data_type == 1).astype(int), 
         unit='n.a.',
         timestamps=trial_onsets,
         description='Timestamps for whisker_hit_trial',
@@ -112,7 +112,7 @@ def add_behavior_container(nwb_file,csv_data_row,Rewarded):
     # --- whisker_miss_trial ----
     ts_whisker_miss = TimeSeries(
         name='whisker_miss_trial',
-        data=(response_data_type == 0).astype(int),  # Convert to binary (1 for miss, 0 for no miss)
+        data=(response_data_type == 0).astype(int), 
         unit='n.a.',
         timestamps=trial_onsets,
         description='Timestamps for whisker_miss_trial',
@@ -124,7 +124,7 @@ def add_behavior_container(nwb_file,csv_data_row,Rewarded):
     # ---- correct_rejection_trial ----
     ts_correct_rejection = TimeSeries(
         name='correct_rejection_trial',
-        data=(response_data_type == 2).astype(int),  # Convert to binary (1 for correct rejection, 0 for no correct rejection)
+        data=(response_data_type == 2).astype(int),  
         unit='n.a.',
         timestamps=trial_onsets,
         description='Timestamps for correct_rejection_trial',
@@ -136,7 +136,7 @@ def add_behavior_container(nwb_file,csv_data_row,Rewarded):
     # ---- false_alarm_trial ----
     ts_false_alarm = TimeSeries(
         name='false_alarm_trial',
-        data=(response_data_type == 3).astype(int),  # Convert to binary (1 for false alarm, 0 for no false alarm)
+        data=(response_data_type == 3).astype(int),  
         unit='n.a.',
         timestamps=trial_onsets,
         description='Timestamps for false_alarm_trial',

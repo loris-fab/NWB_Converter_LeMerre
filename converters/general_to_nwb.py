@@ -53,7 +53,7 @@ def add_general_container(nwb_file, regions):
         "LDS Nicolet",
         "Signals digitized and recorded at 2 kHz on Vision XP.",
     )
-    _ = (ampli_lfp, digitizer)  # référencés pour traçabilité
+    _ = (ampli_lfp, digitizer)  
 
 
     # ##############################################################
@@ -91,7 +91,6 @@ def add_general_container(nwb_file, regions):
         try:
             return len(nwb_file.electrodes.id.data) - 1
         except Exception:
-            # fallback selon versions de pynwb
             return nwb_file.electrodes.table.length - 1
 
     electrode_indices = []
