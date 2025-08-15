@@ -148,6 +148,7 @@ def files_to_config(csv_data_row,output_folder="data"):
     'reward_proba': 1 if str(subject_info.get("Behavior Type", "Unknown").strip()) == "Detection Task" else 0,
     'wh_stim_amps': '5',
     'behavioral_type': "Whisker rewarded (WR+)" if str(subject_info.get("Behavior Type", "Unknown").strip()) == "Detection Task" else "Whisker non-rewarded (WR-)",
+    "Session_Counter": float(subject_info.get("counter", 0)),
     #'lick_threshold': ?,
     #'no_stim_weight': ?,
     #'wh_stim_weight': ?,
@@ -486,8 +487,9 @@ def files_to_dataframe(PL, PLALL, dataframe):
             # Stim_times
             stim_onset= np.asarray(pli["Performance"]["data"].T[3])
 
-            #reward_onset  
-            reward_onset = np.asarray(pli["Valve_times"]["data"]/1000)
+            #reward_onset
+            if behaviortype == "Neutral Exposition":
+                reward_onset = np.asarray(pli["Valve_times"]["data"]/1000)
 
             # trial_onset
             Trial_onset = np.asarray(pli["Performance"]["data"].T[0])
@@ -578,6 +580,7 @@ def files_to_dataframe(PL, PLALL, dataframe):
                 "licence": "DR2013-47",
                 "DG": "",
                 "ExpEnd": "",
+                "counter": float(pli["Session_Info"]["Session_Counter"]),
                 "Created on": "Unknown",
                 "Session": session,
                 "Session Date (yyymmdd)": start_date_2,
@@ -594,7 +597,7 @@ def files_to_dataframe(PL, PLALL, dataframe):
                 "stim_amp": ';'.join(map(str, stim_amp)),
                 "lickflag": ';'.join(map(str, lickflag)),
                 "lick_time": ';'.join(map(str, lick_time)),
-                "reward_onset": ';'.join(map(str, reward_onset)),
+                "reward_onset": ';'.join(map(str, reward_onset)) if behaviortype == "Neutral Exposition" else np.nan,
                 "PiezoLickSignal": ';'.join(map(str, np.asarray(pli["lick"]["data"]))),
                 "response_data": ';'.join(map(str, response_data)) ,
                 "EMG": ';'.join(map(str, EMG)) if not (isinstance(EMG, float) and np.isnan(EMG)) else np.nan,

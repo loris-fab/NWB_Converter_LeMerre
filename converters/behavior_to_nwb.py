@@ -27,7 +27,8 @@ def add_behavior_container(nwb_file,csv_data_row,Rewarded):
     response_data_type = np.asarray(list(map(float, csv_data_row["response_data"].split(";"))))
     lick_time = np.asarray(list(map(float, csv_data_row["lick_time"].split(";"))))
     PiezoLickSignal = np.asarray(list(map(float, csv_data_row["PiezoLickSignal"].split(";"))))
-    reward_onset = np.asarray(list(map(float, csv_data_row["reward_onset"].split(";"))))
+    if not Rewarded:
+        reward_onset = np.asarray(list(map(float, csv_data_row["reward_onset"].split(";"))))
 
     # 1. Created behavior processing module
     bhv_module = nwb_file.create_processing_module('behavior', 'contains behavioral processed data')
@@ -144,7 +145,7 @@ def add_behavior_container(nwb_file,csv_data_row,Rewarded):
     )
     behavior_events.add_timeseries(ts_false_alarm)
 
-    if Rewarded:
+    if not Rewarded:
         # --- reward_onset ---
         ts_reward_onset = TimeSeries(
             name='reward_onset',
