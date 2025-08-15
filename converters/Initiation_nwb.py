@@ -489,7 +489,7 @@ def files_to_dataframe(PL, PLALL, dataframe):
 
             #reward_onset
             if behaviortype == "Neutral Exposition":
-                reward_onset = np.asarray(pli["Valve_times"]["data"]/1000)
+                reward_onset = np.asarray(pli["Valve_times"]["data"]/2000)
 
             # trial_onset
             Trial_onset = np.asarray(pli["Performance"]["data"].T[0])

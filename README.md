@@ -37,7 +37,6 @@ NWB\_converter\_LeMerre
 │   ├── intervals\_to\_nwb.py
 │   ├── Initiation\_nwb.py
 │   └── nwb\_saving.py
-├── requirement.txt
 ├── README.md
 ├── convert_to_nwb_for_PL.py  ← Main conversion script
 ````
@@ -46,28 +45,17 @@ NWB\_converter\_LeMerre
 
 ## 🚀 Usage
 
-Create environment and Install dependencies with::
-```bash
-conda env create -f environment.yml
-```
-
+Follow the environment setup instructions provided in [LSENS-Lab-Immersion repository](https://github.com/loris-fab/LSENS-Lab-Immersion.git), and include the link to it.
 
 ## 🧩 How to use
 Run the following command in the terminal, replacing `csv_path` with the`.csv` file I created, located in the data storage of the LSENS laboratory at EPFL, and `output_folder` with the directory where you want the NWB file to be saved. `--mouses_name` lets you specify one or more mouse names to process, separated by spaces (e.g., `--mouses_name PL200 PL201`).
 
 
 ```bash
-python convert_to_nwb_for_PL.py csv_path output_folder --mouses_name PL200 PL201 (...)
+python convert_to_nwb_for_PL.py output_folder --mouses_name PL200 PL201 (...)
 ```
 *Options:*
 * `--mouses_name` : Name of the mouse/session to convert (default: all sessions)
-* `--psth_window`: time window for PSTH (default: -0.2 0.5 seconds)
-
- for exemple :
-
-```bash
-python convert_to_nwb_for_PL.py Subject_Session_Selection.csv data --mouses_name PL200
-```
 
 
 If everything runs correctly, you should see an output similar to this:
@@ -75,33 +63,9 @@ If everything runs correctly, you should see an output similar to this:
 ```bash
 **************************************************************************
 -_-_-_-_-_-_-_-_-_-_-_-_-_-_- NWB conversion _-_-_-_-_-_-_-_-_-_-_-_-_-_-_
-Converting data to NWB format for mouse: ['PL200_20140619', 'PL200_20140620', 'PL200_20140621', 'PL200_20140622', 'PL200_20140623', 'PL200_20140624', 'PL200_20140625', 'PL200_20140626']
-📃 Creating configs for NWB conversion :
-📑 Created NWB files :
-     o 📌 Add general metadata
-         - Subject metadata
-         - Session metadata
-         - Device metadata
-         - Extracellular electrophysiology metadata
-     o 📶 Add acquisition container
-     o ⚙️ Add processing container
-         - Behavior data
-         - No ephys data for AN sessions
-         - Analysis complementary information
-             > Added LFP_mean_across_all_units to analysis module
-             > Added global_LFP to analysis module
-     o ⏸️ Add intervall container
-
-🔎 Validating NWB file before saving...
-     o ✅ File data/PL200_20140619_142055.nwb is valid, no errors detected and saved successfully.
-     o ✅ File data/PL200_20140620_153120.nwb is valid, no errors detected and saved successfully.
-     o ✅ File data/PL200_20140621_161645.nwb is valid, no errors detected and saved successfully.
-     o ✅ File data/PL200_20140622_160902.nwb is valid, no errors detected and saved successfully.
-     o ✅ File data/PL200_20140623_142533.nwb is valid, no errors detected and saved successfully.
-     o ✅ File data/PL200_20140624_150428.nwb is valid, no errors detected and saved successfully.
-     o ✅ File data/PL200_20140625_142129.nwb is valid, no errors detected and saved successfully.
-     o ✅ File data/PL200_20140626_142654.nwb is valid, no errors detected and saved successfully.
-
+Loading data PL202 ...: 100%|██████████| 1/1 [01:05<00:00, 65.93s/file]
+Converting data to NWB format for mouse: ['PL202']
+Processing : 16it [00:43,  2.70s/it, PL202]                      
 **************************************************************************
 ```
 
