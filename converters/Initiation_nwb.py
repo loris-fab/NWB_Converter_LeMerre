@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 import pandas as pd
 import numpy as np
 import os
@@ -84,7 +84,24 @@ def create_nwb_file_an(config_file):
 
         if kwargs_nwb_file['session_start_time'][-2:] == '60': # handle non leap seconds
             kwargs_nwb_file['session_start_time'] = kwargs_nwb_file['session_start_time'][0:-2] + '59'
-        session_start_time = datetime.strptime(kwargs_nwb_file['session_start_time'], '%Y%m%d %H%M%S')
+        try:
+            session_start_time = datetime.strptime(kwargs_nwb_file['session_start_time'], '%Y%m%d %H%M%S')
+        except ValueError as e:
+            if "day is out of range for month" in str(e):
+                y = int(kwargs_nwb_file['session_start_time'][0:4])
+                m = int(kwargs_nwb_file['session_start_time'][4:6])
+                d = int(kwargs_nwb_file['session_start_time'][6:8])
+                H = int(kwargs_nwb_file['session_start_time'][9:11])
+                M = int(kwargs_nwb_file['session_start_time'][11:13])
+                S = int(kwargs_nwb_file['session_start_time'][13:15])
+
+                # Construire une date valide en partant du premier jour du mois
+                base_date = datetime(y, m, 1, H, M, S) + timedelta(days=d - 1)
+                # Puis soustraire un jour
+                session_start_time = base_date - timedelta(days=1)
+            else:
+                raise
+
         session_start_time = session_start_time.replace(tzinfo=tzlocal())
         kwargs_nwb_file['session_start_time'] = session_start_time
     if 'session_id' not in kwargs_nwb_file:

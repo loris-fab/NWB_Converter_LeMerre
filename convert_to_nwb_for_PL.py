@@ -13,7 +13,6 @@ import converters.nwb_saving
 import converters.general_to_nwb
 import converters.Initiation_nwb
 import converters.acquisition_to_nwb
-import converters.analysis_to_nwb
 import converters.intervals_to_nwb
 from pathlib import Path
 import gc
