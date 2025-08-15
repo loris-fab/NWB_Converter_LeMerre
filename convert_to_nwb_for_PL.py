@@ -66,67 +66,67 @@ def convert_data_to_nwb_pl(output_folder,Folder_sessions_info = Folder_general_i
     for _, csv_data_row in csv_data.iterrows():
         bar.set_postfix_str(str(csv_data_row["Mouse Name"])) 
         bar.update(1)
-    #try:
-        if csv_data_row["Behavior Type"] == "Detection Task":
-            Rewarded = True
-        elif csv_data_row["Behavior Type"] == "Neutral Exposition":
-            Rewarded = False
-        else :
-            raise ValueError(f"Unknown behavior type: {csv_data_row['Behavior Type']}")
+        try:
+            if csv_data_row["Behavior Type"] == "Detection Task":
+                Rewarded = True
+            elif csv_data_row["Behavior Type"] == "Neutral Exposition":
+                Rewarded = False
+            else :
+                raise ValueError(f"Unknown behavior type: {csv_data_row['Behavior Type']}")
 
-        # Creating configs for NWB conversion
-        importlib.reload(converters.Initiation_nwb)
-        output_path, config_file = converters.Initiation_nwb.files_to_config(csv_data_row=csv_data_row, output_folder=output_folder)  #same between Rewarded and NonRewarded sessions
+            # Creating configs for NWB conversion
+            importlib.reload(converters.Initiation_nwb)
+            output_path, config_file = converters.Initiation_nwb.files_to_config(csv_data_row=csv_data_row, output_folder=output_folder)  #same between Rewarded and NonRewarded sessions
 
-        # 📑 Created NWB files
-        importlib.reload(converters.general_to_nwb)
-        nwb_file = converters.Initiation_nwb.create_nwb_file_an(config_file=output_path)  #same between Rewarded and NonRewarded sessions
+            # 📑 Created NWB files
+            importlib.reload(converters.general_to_nwb)
+            nwb_file = converters.Initiation_nwb.create_nwb_file_an(config_file=output_path)  #same between Rewarded and NonRewarded sessions
 
-        # o 📌 Add general metadata
-        importlib.reload(converters.acquisition_to_nwb)
-        signal_LFP, regions= converters.acquisition_to_nwb.extract_lfp_signal(csv_data_row=csv_data_row)
-        electrode_table_region, labels = converters.general_to_nwb.add_general_container(nwb_file=nwb_file, regions=regions)  #same between Rewarded and NonRewarded sessions
+            # o 📌 Add general metadata
+            importlib.reload(converters.acquisition_to_nwb)
+            signal_LFP, regions= converters.acquisition_to_nwb.extract_lfp_signal(csv_data_row=csv_data_row)
+            electrode_table_region, labels = converters.general_to_nwb.add_general_container(nwb_file=nwb_file, regions=regions)  #same between Rewarded and NonRewarded sessions
 
-        # o 📶 Add acquisition container
-        converters.acquisition_to_nwb.add_acquisitions_3series(nwb_file=nwb_file, lfp_array=signal_LFP, electrode_region_all=electrode_table_region, channel_labels=labels)  #same between Rewarded and NonRewarded sessions
+            # o 📶 Add acquisition container
+            converters.acquisition_to_nwb.add_acquisitions_3series(nwb_file=nwb_file, lfp_array=signal_LFP, electrode_region_all=electrode_table_region, channel_labels=labels)  #same between Rewarded and NonRewarded sessions
 
-        # o ⏸️ Add intervall container
-        importlib.reload(converters.intervals_to_nwb)
-        converters.intervals_to_nwb.add_intervals_container(nwb_file=nwb_file,csv_data_row=csv_data_row, Rewarded=Rewarded)
+            # o ⏸️ Add intervall container
+            importlib.reload(converters.intervals_to_nwb)
+            converters.intervals_to_nwb.add_intervals_container(nwb_file=nwb_file,csv_data_row=csv_data_row, Rewarded=Rewarded)
 
-        # o ⚙️ Add behavior container
-        importlib.reload(converters.behavior_to_nwb)
-        converters.behavior_to_nwb.add_behavior_container(nwb_file=nwb_file,csv_data_row=csv_data_row, Rewarded=Rewarded)
+            # o ⚙️ Add behavior container
+            importlib.reload(converters.behavior_to_nwb)
+            converters.behavior_to_nwb.add_behavior_container(nwb_file=nwb_file,csv_data_row=csv_data_row, Rewarded=Rewarded)
 
-        # 🔎 Validating NWB file and saving...
-        importlib.reload(converters.nwb_saving)
-        if Rewarded:
-            output_folder_save = os.path.join(output_folder, "Detection Task")
-        else:
-            output_folder_save = os.path.join(output_folder, "Neutral Exposition")
-        os.makedirs(output_folder_save, exist_ok=True)
-        nwb_path = converters.nwb_saving.save_nwb_file(nwb_file=nwb_file, output_folder=output_folder_save) #same between Rewarded and NonRewarded sessions
+            # 🔎 Validating NWB file and saving...
+            importlib.reload(converters.nwb_saving)
+            if Rewarded:
+                output_folder_save = os.path.join(output_folder, "Detection Task")
+            else:
+                output_folder_save = os.path.join(output_folder, "Neutral Exposition")
+            os.makedirs(output_folder_save, exist_ok=True)
+            nwb_path = converters.nwb_saving.save_nwb_file(nwb_file=nwb_file, output_folder=output_folder_save) #same between Rewarded and NonRewarded sessions
 
-        with NWBHDF5IO(nwb_path, 'r') as io:
-            nwb_errors = validate(io=io)
+            with NWBHDF5IO(nwb_path, 'r') as io:
+                nwb_errors = validate(io=io)
 
-        if nwb_errors:
-            os.remove(nwb_path)
-            raise RuntimeError("NWB validation failed: " + "; ".join(map(str, nwb_errors)))
+            if nwb_errors:
+                os.remove(nwb_path)
+                raise RuntimeError("NWB validation failed: " + "; ".join(map(str, nwb_errors)))
 
-        # Delete .yaml config file 
-        if os.path.exists(output_path):
-            os.remove(output_path)
-    #except Exception as e:
-    #    failures.append((csv_data_row["Session"], str(e)))
-    #    continue
-    #finally:
-        bar.update(1)
+            # Delete .yaml config file 
+            if os.path.exists(output_path):
+                os.remove(output_path)
+        except Exception as e:
+            failures.append((csv_data_row["Session"], str(e)))
+            continue
+        finally:
+            bar.update(1)
     gc.collect()
-#if len(failures) > 0:
-    #    print(f"⚠️ Conversion completed except for : {missing} because of the following errors:")
-    #    for i, (mouse_name, error) in enumerate(failures):
-    #        print(f"    - {mouse_name}: {error}")
+    if len(failures) > 0:
+        print(f"⚠️ Conversion completed except for : {missing} because of the following errors:")
+        for i, (mouse_name, error) in enumerate(failures):
+            print(f"    - {mouse_name}: {error}")
 
     bar.close()
     for f in Path(output_folder).glob("*.yaml"):  
