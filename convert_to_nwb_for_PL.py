@@ -19,17 +19,6 @@ import gc
 import platform
 
 
-if platform.system() == "Darwin":  # macOS
-    Folder_general_info_server= "/Volumes/Petersen-Lab/publications/2018/2018_LeMerre_Neuron/2018_LeMerre_Neuron_data/processed_data"
-    Folder_sessions_info_server = "/Volumes/Petersen-Lab/analysis/Sylvain_Crochet/DATA_REPOSITORY/LeMerre_mPFC_2018/Chronic_LFPs_Preprocessed"
-elif platform.system() == "Windows":
-    Folder_sessions_info_server  = os.path.join(r'\\sv-nas1.rcp.epfl.ch', 'Petersen-Lab', 'analysis', 'Sylvain_Crochet', 'DATA_REPOSITORY', 'LeMerre_mPFC_2018', 'Chronic_LFPs_Preprocessed')
-    Folder_general_info_server  = os.path.join(r'\\sv-nas1.rcp.epfl.ch', 'Petersen-Lab', 'publications', '2018', '2018_LeMerre_Neuron', '2018_LeMerre_Neuron_data', 'processed_data')
-else:
-    print("Other system :", platform.system())
-    Folder_sessions_info_server = None
-    Folder_general_info_server = None
-
 
 
 ############################################################
@@ -37,7 +26,7 @@ else:
 #############################################################
 
 
-def convert_data_to_nwb_pl(output_folder,Folder_sessions_info = Folder_sessions_info_server, Folder_general_info = Folder_general_info_server, mouses_name=None, ):
+def convert_data_to_nwb_pl(output_folder,Folder_sessions_info , Folder_general_info , mouses_name=None, ):
 
     if mouses_name == None: 
         mouses_name = ["PL200", "PL201", "PL202", "PL203", "PL204", "PL205", "PL206", "PL207", "PL208", "PL209", "PL210", "PL211", "PL212", "PL213","PL214", "PL215", "PL216", "PL217", "PL218", "PL219", "PL220","PL221", "PL222", "PL223", "PL224", "PL225"]
@@ -153,10 +142,18 @@ def convert_data_to_nwb_pl(output_folder,Folder_sessions_info = Folder_sessions_
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Convert data to NWB format for PL sessions")
-    parser.add_argument("output_folder", type=str, help="Path to the folder where the NWB file will be saved")
-    parser.add_argument("--Folder_sessions_info", type=str, default=Folder_sessions_info_server, help="Path to the folder containing session information")
-    parser.add_argument("--Folder_general_info", type=str, default=Folder_general_info_server, help="Path to the folder containing general information")
-    parser.add_argument("--mouses_name", nargs='+', default=None, help="Mouse name(s) to process (e.g., PL200 PL201)")
+
+    parser.add_argument("output_folder", type=str,
+                        help="Path to the folder where the NWB file will be saved")
+
+    parser.add_argument("Folder_sessions_info", type=str,
+                        help="Path to the folder containing session information")
+
+    parser.add_argument("Folder_general_info", type=str,
+                        help="Path to the folder containing general information")
+
+    parser.add_argument("--mouses_name", nargs='+', default=None,
+                        help="Mouse name(s) to process (e.g., PL200 PL201)")
 
     args = parser.parse_args()
 

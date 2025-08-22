@@ -40,33 +40,33 @@ NWB\_converter\_LeMerre
 ├── convert_to_nwb_for_PL.py  ← Main conversion script
 ````
 
----
+
+
 
 ## 💻 Work Environment
 
 Follow the environment setup instructions provided in [LSENS-Lab-Immersion repository](https://github.com/loris-fab/LSENS-Lab-Immersion.git), and include the link to it.
 
----
 
 ## 🧩 How to use
 
-Run the following command in the terminal, replacing `output_folder` with the directory where you want the NWB file to be saved.
-`--mouses_name` lets you specify one or more mouse names to process, separated by spaces (e.g., `--mouses_name PL200 PL201`).
+Run the following command in the terminal, replacing the arguments with the correct paths:
+
+1. `output_folder` → directory where you want the NWB file to be saved
+2. `Folder_sessions_info` → path to the folder containing session information
+3. `Folder_general_info` → path to the folder containing general information
+4. `--mouses_name` lets you specify one or more mouse names to process, separated by spaces (e.g., `--mouses_name PL200 PL201`).
 
 ```bash
-python convert_to_nwb_for_PL.py output_folder --Folder_sessions_info "/Volumes/Petersen-Lab/.../Chronic_LFPs_Preprocessed" --Folder_general_info "/Volumes/Petersen-Lab/.../processed_data" --mouses_name PL200 PL201 (...)
+python convert_to_nwb_for_PL.py output_folder Folder_sessions_info Folder_general_info --mouses_name PL200 PL201 (...)
 ```
 
 ### *Options:*
-* `--mouses_name` : Name of the mouse/session to convert (default: all mice)
-* `--Folder_sessions_info` : Path to the folder containing session information
-  (default: depends on your OS, set at the beginning of the script)
-* `--Folder_general_info` : Path to the folder containing general information
-  (default: depends on your OS, set at the beginning of the script)
+* `--mouses_name` : Name(s) of the mouse/session(s) to convert (default: all mice)`
 
 for exemple: 
 ```bash
-python convert_to_nwb_for_PL.py data/output --mouses_name PL200
+
 ```
 If everything runs correctly, you should see an output similar to this:
 
