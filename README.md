@@ -40,9 +40,6 @@ NWB\_converter\_LeMerre
 ├── convert_to_nwb_for_PL.py  ← Main conversion script
 ````
 
-
-
-
 ## 💻 Work Environment
 
 Follow the environment setup instructions provided in [LSENS-Lab-Immersion repository](https://github.com/loris-fab/LSENS-Lab-Immersion.git), and include the link to it.
@@ -53,8 +50,8 @@ Follow the environment setup instructions provided in [LSENS-Lab-Immersion repos
 Run the following command in the terminal, replacing the arguments with the correct paths:
 
 1. `output_folder` → directory where you want the NWB file to be saved
-2. `Folder_sessions_info` → path to the folder containing session information
-3. `Folder_general_info` → path to the folder containing general information
+2. `Folder_sessions_info` → path to the directory containing session information
+3. `Folder_general_info` → path to the directory containing general information
 4. `--mouses_name` lets you specify one or more mouse names to process, separated by spaces (e.g., `--mouses_name PL200 PL201`).
 
 ```bash
@@ -64,9 +61,13 @@ python convert_to_nwb_for_PL.py output_folder Folder_sessions_info Folder_genera
 ### *Options:*
 * `--mouses_name` : Name(s) of the mouse/session(s) to convert (default: all mice)`
 
-for exemple: 
+for exemple for window: 
 ```bash
-
+python convert_to_nwb_for_PL.py \
+"//sv-nas1.rcp.epfl.ch/Petersen-Lab/z_LSENS/Share/Loris_Fabbro/PL/NWB_files" \
+"//sv-nas1.rcp.epfl.ch/Petersen-Lab/analysis/Sylvain_Crochet/DATA_REPOSITORY/LeMerre_mPFC_2018/Chronic_LFPs_Preprocessed" \
+"//sv-nas1.rcp.epfl.ch/Petersen-Lab/publications/2018/2018_LeMerre_Neuron/2018_LeMerre_Neuron_data/processed_data" \
+--mouses_name PL200
 ```
 If everything runs correctly, you should see an output similar to this:
 
