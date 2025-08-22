@@ -64,11 +64,6 @@ python convert_to_nwb_for_PL.py output_folder --Folder_sessions_info "/Volumes/P
 * `--Folder_general_info` : Path to the folder containing general information
   (default: depends on your OS, set at the beginning of the script)
 
----
-
-Veux-tu que je mette ça directement dans un fichier **README.md** prêt à l’emploi pour ton projet ?
-
-
 for exemple: 
 ```bash
 python convert_to_nwb_for_PL.py data/output --mouses_name PL200
