@@ -70,14 +70,13 @@ def add_behavior_container(nwb_file,csv_data_row,Rewarded):
 
 
     # --- STIMULATION FLAGS (stim et flag) ---    
-
     ts_stim_flags = TimeSeries(
         name='StimFlags',
-        data=stim_amp[stim_amp > 0],
-        timestamps=stim_onset[stim_onset > 0],
-        unit='n.a.',
+        data=stim_amp,
+        timestamps=trial_onsets,
+        unit='code',
         description='Timestamps marking the amplitude of whisker stimulation for each trial',
-        comments='Whisker stimulation amplitudes are encoded as integers: 0 = no stimulus (Catch trial), 1 = deflection of the C2 whisker.',
+        comments='Whisker stimulation amplitudes are encoded as integers: 0 = no stimulus (Catch trial), 1 = deflection of the C2 whisker, and higher values indicate increasing stimulation amplitudes.',
         rate = None,
     )
     behavior_events.add_timeseries(ts_stim_flags)

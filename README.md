@@ -14,7 +14,7 @@ Hippocampus Necessary for Goal-Directed Behavior*, Cell Reports, 2028.
 
 ## ⚙️ Features
 
-- Reads `.csv` files containing raw data
+- Reads `.mat` files containing raw data
 - Converts to NWB structure including:
   - General metadata (subject, session…)
   - Time intervals (e.g., trials)

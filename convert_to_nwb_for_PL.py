@@ -140,7 +140,7 @@ def convert_data_to_nwb_pl(output_folder,Folder_sessions_info = Folder_general_i
 #_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Convert data to NWB format for AN sessions")
+    parser = argparse.ArgumentParser(description="Convert data to NWB format for PL sessions")
     parser.add_argument("output_folder", type=str, help="Path to the folder where the NWB file will be saved")
     parser.add_argument("--Folder_sessions_info", type=str, default=Folder_sessions_info_server, help="Path to the folder containing session information")
     parser.add_argument("--Folder_general_info", type=str, default=Folder_general_info_server, help="Path to the folder containing general information")
