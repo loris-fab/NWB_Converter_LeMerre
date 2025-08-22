@@ -16,16 +16,28 @@ import converters.acquisition_to_nwb
 import converters.intervals_to_nwb
 from pathlib import Path
 import gc
+import platform
 
-Folder_general_info_server= "/Volumes/Petersen-Lab/publications/2018/2018_LeMerre_Neuron/2018_LeMerre_Neuron_data/processed_data"
-Folder_sessions_info_server = "/Volumes/Petersen-Lab/analysis/Sylvain_Crochet/DATA_REPOSITORY/LeMerre_mPFC_2018/Chronic_LFPs_Preprocessed"
+
+if platform.system() == "Darwin":  # macOS
+    Folder_general_info_server= "/Volumes/Petersen-Lab/publications/2018/2018_LeMerre_Neuron/2018_LeMerre_Neuron_data/processed_data"
+    Folder_sessions_info_server = "/Volumes/Petersen-Lab/analysis/Sylvain_Crochet/DATA_REPOSITORY/LeMerre_mPFC_2018/Chronic_LFPs_Preprocessed"
+elif platform.system() == "Windows":
+    Folder_sessions_info_server  = os.path.join(r'\\sv-nas1.rcp.epfl.ch', 'Petersen-Lab', 'analysis', 'Sylvain_Crochet', 'DATA_REPOSITORY', 'LeMerre_mPFC_2018', 'Chronic_LFPs_Preprocessed')
+    Folder_general_info_server  = os.path.join(r'\\sv-nas1.rcp.epfl.ch', 'Petersen-Lab', 'publications', '2018', '2018_LeMerre_Neuron', '2018_LeMerre_Neuron_data', 'processed_data')
+else:
+    print("Other system :", platform.system())
+    Folder_sessions_info_server = None
+    Folder_general_info_server = None
+
+
 
 ############################################################
 # Functions for converting data to NWB format for AN sessions
 #############################################################
 
 
-def convert_data_to_nwb_pl(output_folder,Folder_sessions_info = Folder_general_info_server, Folder_general_info = Folder_general_info_server, mouses_name=None, ):
+def convert_data_to_nwb_pl(output_folder,Folder_sessions_info = Folder_sessions_info_server, Folder_general_info = Folder_general_info_server, mouses_name=None, ):
 
     if mouses_name == None: 
         mouses_name = ["PL200", "PL201", "PL202", "PL203", "PL204", "PL205", "PL206", "PL207", "PL208", "PL209", "PL210", "PL211", "PL212", "PL213","PL214", "PL215", "PL216", "PL217", "PL218", "PL219", "PL220","PL221", "PL222", "PL223", "PL224", "PL225"]
@@ -44,12 +56,12 @@ def convert_data_to_nwb_pl(output_folder,Folder_sessions_info = Folder_general_i
     pbar = tqdm(pairs, unit="file")
     
     for PL, PLLA in pbar:
-    #try:
-        pbar.set_description(f"Loading data {Path(PL).name} ...")
-        csv_data= converters.Initiation_nwb.files_to_dataframe(PL, PLLA, csv_data)
-        gc.collect()
-    #except Exception as e:
-    #    failures.append((Path(PL).name, str(e)))
+        try:
+            pbar.set_description(f"Loading data {Path(PL).name} ...")
+            csv_data= converters.Initiation_nwb.files_to_dataframe(PL, PLLA, csv_data)
+            gc.collect()
+        except Exception as e:
+            failures.append((Path(PL).name, str(e)))
 
     for mouse, err_msg in failures:
         csv_data = converters.Initiation_nwb.remove_rows_of_df(csv_data, mouse, "Mouse Name")
