@@ -1,8 +1,7 @@
 
-
-import numpy as np
-import h5py
 from pynwb.epoch import TimeIntervals   
+import numpy as np
+import h5py  
 
 ###############################################################
 # Functions for converting intervals to NWB format for AN sessions
@@ -26,7 +25,7 @@ def add_intervals_container(nwb_file,csv_data_row,Rewarded) -> None:
 
     """
 
-    # --- Extract trial data ---
+    # Extract trial data
     trial_onsets = list(map(float, csv_data_row["Trial_onset"].split(";")))
     stim_indices = np.asarray(list(map(float, csv_data_row["stim_indices"].split(";"))))
     stim_amp = list(map(float, csv_data_row["stim_amp"].split(";")))
@@ -38,7 +37,7 @@ def add_intervals_container(nwb_file,csv_data_row,Rewarded) -> None:
     n_trials = len(trial_onsets)
     lick_time = list(map(float, csv_data_row["lick_time"].split(";")))
 
-    # --- Define new trial columns ---
+    # Define new trial columns
     new_columns = {
         'trial_type': 'stimulus Whisker vs no stimulus trial',
         'whisker_stim': '1 if whisker stimulus delivered, else 0',
@@ -55,7 +54,7 @@ def add_intervals_container(nwb_file,csv_data_row,Rewarded) -> None:
         "lick_time": "Within response window lick time. Absolute time (s) relative to session start time"
     }
 
-    # --- Add columns before inserting trials ---
+    # Add columns before inserting trials 
     if nwb_file.trials is None:
         # This creates an empty trial table
         for col, desc in new_columns.items():
@@ -67,7 +66,7 @@ def add_intervals_container(nwb_file,csv_data_row,Rewarded) -> None:
             if col not in nwb_file.trials.colnames:
                 nwb_file.add_trial_column(name=col, description=desc)
 
-    # --- Add trials ---
+    # Add trials
     for i in range(n_trials):
         nwb_file.add_trial(
             start_time=float(trial_onsets[i]),

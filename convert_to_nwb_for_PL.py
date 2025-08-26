@@ -1,139 +1,214 @@
-"""_summary_
-"""
-import importlib
-import os
-import h5py
-import pandas as pd
-import numpy as np
-from tqdm import tqdm
-from pynwb import NWBHDF5IO, validate
-import argparse
+
+
+# Imports converters
 import converters.behavior_to_nwb
 import converters.nwb_saving
 import converters.general_to_nwb
 import converters.Initiation_nwb
 import converters.acquisition_to_nwb
 import converters.intervals_to_nwb
-from pathlib import Path
-import gc
-import platform
 
+# Imports modules
+from typing import List, Optional, Tuple, Set
+from pynwb import NWBHDF5IO, validate
+from pathlib import Path
+from tqdm import tqdm
+import pandas as pd
+import numpy as np
+import importlib
+import argparse
+import os
+import gc
 
 
 
 ############################################################
-# Functions for converting data to NWB format for AN sessions
-#############################################################
+# Function that converts PL data to NWB format
+############################################################
 
+def convert_data_to_nwb_pl(output_folder,Folder_sessions_info,Folder_general_info,mouses_name = None ) :
+    """
+        Convert PL session data into validated NWB files.
 
-def convert_data_to_nwb_pl(output_folder,Folder_sessions_info , Folder_general_info , mouses_name=None, ):
+        The function:
+        - Finds matching processed/raw files for given mice.
+        - Builds session DataFrames and Creates NWB files with metadata, LFP signals, intervals, and behavior.
+        - Saves and validates them.
 
-    if mouses_name == None: 
-        mouses_name = ["PL200", "PL201", "PL202", "PL203", "PL204", "PL205", "PL206", "PL207", "PL208", "PL209", "PL210", "PL211", "PL212", "PL213","PL214", "PL215", "PL216", "PL217", "PL218", "PL219", "PL220","PL221", "PL222", "PL223", "PL224", "PL225"]
+        Parameters
+        ----------
+        output_folder : str
+            Destination folder for NWB files.
+        Folder_sessions_info : str
+            Path to session information.
+        Folder_general_info : str
+            Path to general information.
+        mouses_name : list of str, optional
+            Mouse names to include (default: predefined PL200–PL225).
 
-    # Find pairs of processed and raw data files 
+        Returns
+        -------
+        None
+            NWB files are written to disk; errors are printed.
+        """
+    # Reload the converters module
     importlib.reload(converters.Initiation_nwb)
-    pairs = converters.Initiation_nwb.find_pl_pairs(Folder_general_info, Folder_sessions_info, mouse_names=mouses_name)
+    importlib.reload(converters.Initiation_nwb)
+    importlib.reload(converters.acquisition_to_nwb)
+    importlib.reload(converters.general_to_nwb)
+    importlib.reload(converters.intervals_to_nwb)
+    importlib.reload(converters.behavior_to_nwb)
+    importlib.reload(converters.nwb_saving)
+
+    # Default mouse list if none provided
+    if mouses_name is None:
+        mouses_name = [
+            "PL200", "PL201", "PL202", "PL203", "PL204", "PL205", "PL206", "PL207", "PL208",
+            "PL209", "PL210", "PL211", "PL212", "PL213", "PL214", "PL215", "PL216", "PL217",
+            "PL218", "PL219", "PL220", "PL221", "PL222", "PL223", "PL224", "PL225"
+        ]
 
 
     print("**************************************************************************")
     print("-_-_-_-_-_-_-_-_-_-_-_-_-_-_- NWB conversion _-_-_-_-_-_-_-_-_-_-_-_-_-_-_")
-    # Loop through each pair of processed and raw data files
-    csv_data = pd.DataFrame(columns=['Mouse Name'])
-    failures = []  # (mouse_name, err_msg)
 
-    pbar = tqdm(pairs, unit="file")
-    
-    for PL, PLLA in pbar:
+    # Find pairs of processed/raw data files
+    pairs = converters.Initiation_nwb.find_pl_pairs(Folder_general_info, Folder_sessions_info, mouse_names=mouses_name)
+    failures: List[Tuple[str, str]] = []   # (session id, error message)
+    seen_mice = set()            # keep track of which mice were processed
+    print("Converting data to NWB format for mouse: ", mouses_name)
+    pbar = tqdm(pairs, unit="file", desc="Processing...")
+    for General_path, sessions_path in pbar:
+        session_id = Path(General_path).name
+        pbar.set_postfix_str("Loading sessions for:" + session_id)
+
+        # Build a small DataFrame for this session only
         try:
-            pbar.set_description(f"Loading data {Path(PL).name} ...")
-            csv_data= converters.Initiation_nwb.files_to_dataframe(PL, PLLA, csv_data)
+            sessions_df_for_this_pair = converters.Initiation_nwb.files_to_dataframe(
+                General_path, sessions_path, pd.DataFrame(columns=["Mouse Name"])
+            )
+        except Exception as e:
+            failures.append((session_id, f"files_to_dataframe: {e}"))
             gc.collect()
-        except Exception as e:
-            failures.append((Path(PL).name, str(e)))
-
-    for mouse, err_msg in failures:
-        csv_data = converters.Initiation_nwb.remove_rows_of_df(csv_data, mouse, "Mouse Name")
-
-
-    csv_data = csv_data[csv_data["Mouse Name"].isin(mouses_name)]
-
-    # Check for missing mouse names
-    missing = [name for name in mouses_name if name not in csv_data["Mouse Name"].unique().tolist()]
-
-
-    print("Converting data to NWB format for mouse:", list(np.unique(csv_data["Mouse Name"])))
-    bar = tqdm(total=len(csv_data), desc="Processing ")
-    for _, csv_data_row in csv_data.iterrows():
-        bar.set_postfix_str(str(csv_data_row["Mouse Name"])) 
-        bar.update(1)
-        try:
-            if csv_data_row["Behavior Type"] == "Detection Task":
-                Rewarded = True
-            elif csv_data_row["Behavior Type"] == "Neutral Exposition":
-                Rewarded = False
-            else :
-                raise ValueError(f"Unknown behavior type: {csv_data_row['Behavior Type']}")
-
-            # Creating configs for NWB conversion
-            importlib.reload(converters.Initiation_nwb)
-            output_path, config_file = converters.Initiation_nwb.files_to_config(csv_data_row=csv_data_row, output_folder=output_folder)  #same between Rewarded and NonRewarded sessions
-
-            # 📑 Created NWB files
-            importlib.reload(converters.general_to_nwb)
-            nwb_file = converters.Initiation_nwb.create_nwb_file_an(config_file=output_path)  #same between Rewarded and NonRewarded sessions
-
-            # o 📌 Add general metadata
-            importlib.reload(converters.acquisition_to_nwb)
-            signal_LFP, regions= converters.acquisition_to_nwb.extract_lfp_signal(csv_data_row=csv_data_row)
-            electrode_table_region, labels = converters.general_to_nwb.add_general_container(nwb_file=nwb_file, regions=regions)  #same between Rewarded and NonRewarded sessions
-
-            # o 📶 Add acquisition container
-            converters.acquisition_to_nwb.add_acquisitions_3series(nwb_file=nwb_file, lfp_array=signal_LFP, electrode_region_all=electrode_table_region, channel_labels=labels)  #same between Rewarded and NonRewarded sessions
-
-            # o ⏸️ Add intervall container
-            importlib.reload(converters.intervals_to_nwb)
-            converters.intervals_to_nwb.add_intervals_container(nwb_file=nwb_file,csv_data_row=csv_data_row, Rewarded=Rewarded)
-
-            # o ⚙️ Add behavior container
-            importlib.reload(converters.behavior_to_nwb)
-            converters.behavior_to_nwb.add_behavior_container(nwb_file=nwb_file,csv_data_row=csv_data_row, Rewarded=Rewarded)
-
-            # 🔎 Validating NWB file and saving...
-            importlib.reload(converters.nwb_saving)
-            if Rewarded:
-                output_folder_save = os.path.join(output_folder, "Detection Task")
-            else:
-                output_folder_save = os.path.join(output_folder, "Neutral Exposition")
-            os.makedirs(output_folder_save, exist_ok=True)
-            nwb_path = converters.nwb_saving.save_nwb_file(nwb_file=nwb_file, output_folder=output_folder_save) #same between Rewarded and NonRewarded sessions
-
-            with NWBHDF5IO(nwb_path, 'r') as io:
-                nwb_errors = validate(io=io)
-
-            if nwb_errors:
-                os.remove(nwb_path)
-                raise RuntimeError("NWB validation failed: " + "; ".join(map(str, nwb_errors)))
-
-            # Delete .yaml config file 
-            if os.path.exists(output_path):
-                os.remove(output_path)
-        except Exception as e:
-            failures.append((csv_data_row["Session"], str(e)))
             continue
-        finally:
-            bar.update(1)
-    gc.collect()
-    if len(failures) > 0:
-        print(f"⚠️ Conversion completed except for : {missing} because of the following errors:")
-        for i, (mouse_name, error) in enumerate(failures):
-            print(f"    - {mouse_name}: {error}")
 
-    bar.close()
-    for f in Path(output_folder).glob("*.yaml"):  
-        f.unlink()
+        # 2) Filter by requested mice
+        if "Mouse Name" not in sessions_df_for_this_pair.columns:
+            failures.append((session_id, "Missing 'Mouse Name' column in session DataFrame"))
+            gc.collect()
+            continue
+
+        sessions_df_for_this_pair = sessions_df_for_this_pair[sessions_df_for_this_pair["Mouse Name"].isin(mouses_name)]
+        if sessions_df_for_this_pair.empty:
+            # Skip if no relevant mouse in this session
+            gc.collect()
+            continue
+
+        # 3) Process each row (one session may produce multiple rows)
+        for _, row in sessions_df_for_this_pair.iterrows():
+            mouse = str(row.get("Mouse Name", "Unknown"))
+            pbar.set_postfix_str("Mouse :" + mouse + " Session :" + row.get("Session", "Unknown"))
+            seen_mice.add(mouse)
+
+            # Determine behavior type
+            behavior = str(row.get("Behavior Type", ""))
+            if behavior == "Detection Task":
+                rewarded = True
+            elif behavior == "Neutral Exposition":
+                rewarded = False
+            else:
+                failures.append((str(row.get("Session", session_id)),
+                                 f"Unknown behavior type: {behavior!r}"))
+                continue
+
+            try:
+                # Creating configs and  NWB files
+                output_path, _ = converters.Initiation_nwb.files_to_config(
+                    subject_info=row, output_folder=output_folder
+                )
+                nwb_file = converters.Initiation_nwb.create_nwb_file_an(config_file=output_path)
+
+                # Add General metadata 
+                signal_LFP, regions = converters.acquisition_to_nwb.extract_lfp_signal(csv_data_row=row)
+
+                electrode_region, labels = converters.general_to_nwb.add_general_container(nwb_file=nwb_file, regions=regions)
+
+                # Add acquisition
+                converters.acquisition_to_nwb.add_acquisitions(
+                    nwb_file=nwb_file,
+                    lfp_array=signal_LFP,
+                    electrode_region_all=electrode_region,
+                    channel_labels=labels,
+                )
+
+                # Add Intervals 
+                converters.intervals_to_nwb.add_intervals_container(
+                    nwb_file=nwb_file, csv_data_row=row, Rewarded=rewarded
+                )
+
+                # Add Behavior
+                converters.behavior_to_nwb.add_behavior_container(
+                    nwb_file=nwb_file, csv_data_row=row, Rewarded=rewarded
+                )
+
+                # Save and validate
+                subfolder = "Detection Task" if rewarded else "Neutral Exposition"
+                output_folder_save = os.path.join(output_folder, subfolder)
+                os.makedirs(output_folder_save, exist_ok=True)
+
+                nwb_path = converters.nwb_saving.save_nwb_file(
+                    nwb_file=nwb_file, output_folder=output_folder_save
+                )
+
+                with NWBHDF5IO(nwb_path, "r") as io:
+                    nwb_errors = validate(io=io)
+
+                if nwb_errors:
+                    # Delete invalid file
+                    try:
+                        os.remove(nwb_path)
+                    except OSError:
+                        pass
+                    raise RuntimeError(
+                        "NWB validation failed: " + "; ".join(map(str, nwb_errors))
+                    )
+
+                # Remove .yaml config file
+                if output_path and os.path.exists(output_path):
+                    try:
+                        os.remove(output_path)
+                    except OSError:
+                        pass
+
+            except Exception as e:
+                failures.append((str(row.get("Session", session_id)), str(e)))
+                continue
+            finally:
+                gc.collect()
+
+        del sessions_df_for_this_pair
+        gc.collect()
+
+    # Report missing mice
+    missing = [m for m in mouses_name if m not in seen_mice]
+    pbar.close()
+    if failures or missing:
+        if missing:
+            print(f"⚠️ No sessions found for: {missing}")
+        if failures:
+            print("⚠️ Conversion errors:")
+            for ident, err in failures:
+                print(f"    - {ident}: {err}")
+
+    # Final cleanup: remove orphan .yaml files in root output folder
+    for f in Path(output_folder).glob("*.yaml"):
+        try:
+            f.unlink()
+        except OSError:
+            pass
 
     print("**************************************************************************")
+
 
 
 #_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_

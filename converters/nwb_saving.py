@@ -1,9 +1,9 @@
-import os
-from datetime import datetime
-import gc
-gc.collect()
 
 from pynwb import NWBHDF5IO
+from datetime import datetime
+import os
+import gc
+
 
 
 def save_nwb_file(nwb_file, output_folder):

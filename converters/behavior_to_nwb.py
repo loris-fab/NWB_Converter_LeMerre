@@ -1,7 +1,6 @@
-import numpy as np
-from pynwb.base import TimeSeries
 from pynwb.behavior import BehavioralEvents, BehavioralTimeSeries
-from pynwb import TimeSeries
+from pynwb.base import TimeSeries
+import numpy as np
 import pandas as pd
 
 
@@ -33,11 +32,10 @@ def add_behavior_container(nwb_file,csv_data_row,Rewarded):
     # 1. Created behavior processing module
     bhv_module = nwb_file.create_processing_module('behavior', 'contains behavioral processed data')
 
-    ###############################################
-    ### Add behavioral events                    ###
-    ###############################################
 
-
+    ###############################################
+    ### Add behavioral events                   ###
+    ###############################################
     behavior_events = BehavioralEvents(name='BehavioralEvents')
     bhv_module.add_data_interface(behavior_events)
 
@@ -155,6 +153,8 @@ def add_behavior_container(nwb_file,csv_data_row,Rewarded):
             comments = "time of each reward delivery event.",
         )
         behavior_events.add_timeseries(ts_reward_onset)
+
+
     #########################################################
     ### Add continuous traces  ###
     #########################################################

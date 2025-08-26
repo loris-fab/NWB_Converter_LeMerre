@@ -74,10 +74,8 @@ If everything runs correctly, you should see an output similar to this:
 ```bash
 **************************************************************************
 -_-_-_-_-_-_-_-_-_-_-_-_-_-_- NWB conversion _-_-_-_-_-_-_-_-_-_-_-_-_-_-_
-Loading data PL200 ...: 100%|██████████| 1/1 [01:05<00:00, 65.93s/file]
-Converting data to NWB format for mouse: ['PL200']
-Processing : 16it [00:43,  2.70s/it, PL202]                      
-**************************************************************************
+Converting data to NWB format for mouse:  ['PL200']
+Processing...: 100%|██████████| 1/1 [05:58<00:00, 358.97s/file, Mouse :PL200 Session :PL200_20140626]**************************************************************************
 ```
 
 ## ✍️ Author

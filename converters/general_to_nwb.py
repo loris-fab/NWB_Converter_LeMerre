@@ -1,10 +1,7 @@
-
+from pynwb.device import Device
 from uuid import uuid4
 import numpy as np
-import h5py
-from pynwb.device import Device
-import numpy as np
-import pandas as pd
+
 
 
 
@@ -87,7 +84,7 @@ def add_general_container(nwb_file, regions):
     }
 
     def _last_row_index():
-        """Index de la dernière ligne de la table electrodes (0 based)."""
+        """ Return the index of the last row in the electrode table."""
         try:
             return len(nwb_file.electrodes.id.data) - 1
         except Exception:
