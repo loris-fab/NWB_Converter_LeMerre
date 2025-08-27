@@ -73,7 +73,7 @@ python convert_to_nwb_for_PL.py \
 --mouses_name PL200
 ```
 
-## Run inside a Jupyter Notebook
+### Run inside a Jupyter Notebook
 
 You can also call the conversion function directly in a Jupyter Notebook without using the command line.
 Simply import the function `convert_data_to_nwb_pl` from your script and call it with the proper arguments:
