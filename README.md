@@ -52,10 +52,10 @@ Please find below the key information
 1. `output_folder` → directory where you want the NWB file to be saved
 2. `Folder_sessions_info` → path to the directory containing session information
 3. `Folder_general_info` → path to the directory containing general information
-4. `--mouses_name` lets you specify one or more mouse names to process.
+4. `mouses_name` → lets you specify one or more mouse names to process.
 
 ### Commande in the terminal
-Run the following command in the terminal, replacing the arguments with the correct paths:
+Run the following command in the terminal, replacing the arguments :
 
 ```bash
 python convert_to_nwb_for_PL.py output_folder Folder_sessions_info Folder_general_info --mouses_name PL200 PL201 (...)
@@ -78,10 +78,10 @@ python convert_to_nwb_for_PL.py \
 You can also call the conversion function directly in a Jupyter Notebook without using the command line.
 Simply import the function `convert_data_to_nwb_pl` from your script and call it with the proper arguments:
 
+*for exemple for window:* 
 ```python
 from convert_to_nwb_for_PL import convert_data_to_nwb_pl
 
-# Example call
 convert_data_to_nwb_pl(
     output_folder="//sv-nas1.rcp.epfl.ch/Petersen-Lab/z_LSENS/Share/Loris_Fabbro/PL/NWB_files",
     Folder_sessions_info="//sv-nas1.rcp.epfl.ch/Petersen-Lab/analysis/Sylvain_Crochet/DATA_REPOSITORY/LeMerre_mPFC_2018/Chronic_LFPs_Preprocessed",
@@ -89,6 +89,9 @@ convert_data_to_nwb_pl(
     mouses_name=["PL200"]  # you can pass one or multiple mouse names
 )
 ```
+
+*Options:*
+* `mouses_name` : Name(s) of the mouse/session(s) to convert (default: all mice).Use a Python list for multiple mice (e.g. ["PL200", "PL201"]).
 
 ### Outcome
 If everything runs correctly, you should see an output similar to this:
