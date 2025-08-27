@@ -80,7 +80,7 @@ def convert_data_to_nwb_pl(output_folder,Folder_sessions_info,Folder_general_inf
     pbar = tqdm(pairs, unit="file", desc="Processing...")
     for General_path, sessions_path in pbar:
         session_id = Path(General_path).name
-        pbar.set_postfix_str("Loading sessions for:" + session_id)
+        pbar.set_description(f"Loading sessions for: {session_id}")
 
         # Build a small DataFrame for this session only
         try:
@@ -107,7 +107,8 @@ def convert_data_to_nwb_pl(output_folder,Folder_sessions_info,Folder_general_inf
         # 3) Process each row (one session may produce multiple rows)
         for _, row in sessions_df_for_this_pair.iterrows():
             mouse = str(row.get("Mouse Name", "Unknown"))
-            pbar.set_postfix_str("Mouse :" + mouse + " Session :" + row.get("Session", "Unknown"))
+            pbar.set_description(f"Conversion to NWB: 🔁 {str(row.get('Session', 'Unknown'))}")
+
             seen_mice.add(mouse)
 
             # Determine behavior type
@@ -187,11 +188,13 @@ def convert_data_to_nwb_pl(output_folder,Folder_sessions_info,Folder_general_inf
                 gc.collect()
 
         del sessions_df_for_this_pair
+        pbar.set_description(f"Conversion to NWB is finished")
         gc.collect()
 
     # Report missing mice
     missing = [m for m in mouses_name if m not in seen_mice]
     pbar.close()
+
     if failures or missing:
         if missing:
             print(f"⚠️ No sessions found for: {missing}")
