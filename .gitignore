@@ -1,0 +1,9 @@
+data
+__pycache__
+
+# NWB files
+*.nwb
+
+# csv files
+*.csv
+

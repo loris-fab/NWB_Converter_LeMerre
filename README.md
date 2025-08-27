@@ -19,7 +19,6 @@ Hippocampus Necessary for Goal-Directed Behavior*, Cell Reports, 2028.
   - General metadata (subject, session…)
   - Time intervals (e.g., trials)
   - Behavioral data (licks, rewards…)
-  - Optional analysis containers (e.g., LFPmean)
 - Validates the NWB file after conversion
 
 
