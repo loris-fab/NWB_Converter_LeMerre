@@ -106,6 +106,7 @@ Conversion to NWB is finished: 100%|██████████| 1/1 [05:43<0
 **************************************************************************
 ```
 
+For each session, an `.nwb` file named with the session identifier is written under `Detection Task/` or `Neutral Exposition/` inside the chosen output directory. The script prints a summary and performs NWB validation before final save.
 
 ## ✍️ Author
 
