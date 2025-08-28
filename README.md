@@ -46,7 +46,9 @@ Follow the environment setup instructions provided in [LSENS-Lab-Immersion repos
 
 ## 🧩 How to use
 
-Please find below the key information
+Whether you run the pipeline from the **terminal** or from **Jupyter**, it is essential to ensure that you are using the correct environment. If you are working in *Visual Studio Code*, follow the <Verification> steps in the [LSENS-Lab-Immersion repository](https://github.com/loris-fab/LSENS-Lab-Immersion.git) to confirm that you are using the right environment either in the terminal when executing the pipeline there, or in Jupyter when running it from notebooks. Once confirmed, you can proceed with the instructions further down to run the pipeline.
+
+Now, please find below the key information
 
 1. `output_folder` → directory where you want the NWB file to be saved
 2. `Folder_sessions_info` → path to the directory containing session information
@@ -79,14 +81,15 @@ Simply import the function `convert_data_to_nwb_pl` from your script and call it
 
 *for exemple for window:* 
 ```python
-from convert_to_nwb_for_PL import convert_data_to_nwb_pl
+import importlib
+import convert_to_nwb_for_PL
 
-convert_data_to_nwb_pl(
-    output_folder="//sv-nas1.rcp.epfl.ch/Petersen-Lab/z_LSENS/Share/Loris_Fabbro/PL/NWB_files",
-    Folder_sessions_info="//sv-nas1.rcp.epfl.ch/Petersen-Lab/analysis/Sylvain_Crochet/DATA_REPOSITORY/LeMerre_mPFC_2018/Chronic_LFPs_Preprocessed",
-    Folder_general_info="//sv-nas1.rcp.epfl.ch/Petersen-Lab/publications/2018/2018_LeMerre_Neuron/2018_LeMerre_Neuron_data/processed_data",
-    mouses_name=["PL200"]  # you can pass one or multiple mouse names
-)
+
+Folder_general_info_server= "//sv-nas1.rcp.epfl.ch/Petersen-Lab/publications/2018/2018_LeMerre_Neuron/2018_LeMerre_Neuron_data/processed_data"
+Folder_sessions_info_server = "//sv-nas1.rcp.epfl.ch/Petersen-Lab/analysis/Sylvain_Crochet/DATA_REPOSITORY/LeMerre_mPFC_2018/Chronic_LFPs_Preprocessed"
+output_folder_serveur = "//sv-nas1.rcp.epfl.ch/Petersen-Lab/z_LSENS/Share/Loris_Fabbro/PL/NWB_files"
+importlib.reload(convert_to_nwb_for_PL)
+nwb_path = convert_to_nwb_for_PL.convert_data_to_nwb_pl(output_folder= output_folder_serveur, Folder_sessions_info=Folder_sessions_info_server, Folder_general_info=Folder_general_info_server, mouses_name=["PL200"])
 ```
 
 *Options:*
